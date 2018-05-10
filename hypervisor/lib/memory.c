@@ -302,6 +302,30 @@ void free(void *ptr)
         }
 }
 
+#ifdef CONFIG_NO_MALLOC
+
+bool per_cpu_data_used = false;
+
+void *alloc_per_cpu_data(int nr_cpus __unused)
+{
+	if (per_cpu_data_used) {
+		pr_err("Error: allocate per_cpu_data more than once.");
+		return NULL;
+	}
+
+	per_cpu_data_used = true;
+	return _ld_cpu_data_start;
+}
+
+#else /* CONFIG_NO_MALLOC */
+
+void *alloc_per_cpu_data(int nr_cpus)
+{
+	return malloc(PER_CPU_DATA_SIZE * pcpu_num);
+}
+
+#endif  /* CONFIG_NO_MALLOC */
+
 void *memchr(const void *void_s, int c, size_t n)
 {
         unsigned char val = (unsigned char)c;

@@ -61,6 +61,19 @@ SECTIONS
 
     } > ram
 
+#ifdef CONFIG_NO_MALLOC
+    .cpu_data (NOLOAD):
+    {
+        . = ALIGN(4096) ;
+        _ld_cpu_data_start = .;
+        *(.cpu_data) ;
+        . = ALIGN(4096) ;
+        _ld_cpu_data_end = .;
+        _ld_cpu_data_size = _ld_cpu_data_end - _ld_cpu_data_start;
+        . += (CONFIG_NR_CPUS - 1) * _ld_cpu_data_size;
+    } > ram
+#endif
+
     .bss_noinit (NOLOAD):
     {
 	. = ALIGN(4) ;
@@ -80,6 +93,7 @@ SECTIONS
         _ld_bss_end = . ;
     } > ram
 
+#ifndef CONFIG_NO_MALLOC
     .discard (NOLOAD):
     {
         . = ALIGN(4096) ;
@@ -88,8 +102,8 @@ SECTIONS
         . = ALIGN(4096) ;
         _ld_cpu_data_end = .;
     } > ram
+#endif
 
     _ld_ram_size = LENGTH(ram) ;
     _ld_ram_end = _ld_ram_size + _ld_ram_start ;
 }
-

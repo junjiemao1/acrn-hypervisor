@@ -52,4 +52,6 @@ void *alloc_page(void);
 void *alloc_pages(unsigned int page_num);
 void free(void *ptr);
 
+void *alloc_per_cpu_data(int nr_cpus);
+
 #endif /* MEM_MGT_H_ */

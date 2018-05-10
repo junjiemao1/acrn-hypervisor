@@ -252,7 +252,9 @@ static void alloc_phy_cpu_data(int pcpu_num)
 {
 	phy_cpu_num = pcpu_num;
 
-	per_cpu_data_base_ptr = calloc(1, PER_CPU_DATA_SIZE * pcpu_num);
+	per_cpu_data_base_ptr = alloc_per_cpu_data(pcpu_num);
+	memset(_ld_cpu_data_start, 0, PER_CPU_DATA_SIZE * pcpu_num);
+
 	ASSERT(per_cpu_data_base_ptr != NULL, "");
 }
 
