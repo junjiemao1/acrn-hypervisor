@@ -282,6 +282,11 @@ static int init_phy_cpu_storage(void)
 	ASSERT(lapic_id_base != NULL, "fail to alloc page");
 
 	pcpu_num = parse_madt(lapic_id_base);
+#ifdef CONFIG_NO_MALLOC
+	if (pcpu_num > CONFIG_NR_CPUS)
+		panic("Configured to support platforms with at most %d cores", CONFIG_NR_CPUS);
+#endif
+
 	alloc_phy_cpu_data(pcpu_num);
 
 	for (i = 0; i < pcpu_num; i++)
