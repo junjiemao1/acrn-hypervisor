@@ -62,7 +62,7 @@ struct irq_desc {
 	uint64_t irq_lost_cnt;
 };
 
-static struct irq_desc *irq_desc_base;
+static struct irq_desc irq_desc_base[NR_MAX_IRQS] __aligned(CPU_PAGE_SIZE);
 static int vector_to_irq[NR_MAX_VECTOR + 1];
 
 static DEFINE_CPU_DATA(uint64_t[NR_MAX_IRQS], irq_count);
@@ -72,15 +72,9 @@ spurious_handler_t spurious_handler;
 
 static void init_irq_desc(void)
 {
-	int i, page_num = 0;
-	int desc_size = NR_MAX_IRQS * sizeof(struct irq_desc);
+	int i;
 
-	page_num = (desc_size + CPU_PAGE_SIZE-1) >> CPU_PAGE_SHIFT;
-
-	irq_desc_base = alloc_pages(page_num);
-
-	ASSERT(irq_desc_base, "page alloc failed!");
-	memset(irq_desc_base, 0, page_num * CPU_PAGE_SIZE);
+	memset(irq_desc_base, 0, sizeof(irq_desc_base));
 
 	for (i = 0; i < NR_MAX_IRQS; i++) {
 		irq_desc_base[i].irq = i;
