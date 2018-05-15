@@ -301,7 +301,7 @@ common_register_handler(int irq,
 		goto OUT;
 	}
 
-	node = calloc(1, sizeof(struct dev_handler_node));
+	node = alloc_dev_handler_node(irq);
 	if (node == NULL) {
 		pr_err("failed to alloc node");
 		irq_desc_try_free_vector(irq);
@@ -311,7 +311,7 @@ common_register_handler(int irq,
 	desc = irq_desc_base + irq;
 	added = irq_desc_append_dev(desc, node, info->share);
 	if (!added) {
-		free(node);
+		free_dev_handler_node(irq, node);
 		node = NULL;
 		pr_err("failed to add node to non-shared irq");
 	}
@@ -662,7 +662,7 @@ void unregister_handler_common(struct dev_handler_node *node)
 UNLOCK_EXIT:
 	spinlock_irqrestore_release(&desc->irq_lock);
 	irq_desc_try_free_vector(desc->irq);
-	free(node);
+	free_dev_handler_node(desc->irq, node);
 }
 
 /*

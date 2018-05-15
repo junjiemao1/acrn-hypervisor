@@ -252,4 +252,30 @@ clz64(long mask)
 	return (63 - flsl(mask));
 }
 
+#define DEFINE_POOL(type, name, blocks, slots_per_block)		\
+	struct {							\
+		uint64_t free_bitmap[blocks];				\
+		type slots[blocks][slots_per_block];			\
+	} name;
+
+static inline int
+bitmap_find_first_zero_and_set(uint64_t *bitmap, uint32_t capacity)
+{
+	do {
+		int32_t index = get_first_zero_bit(*bitmap);
+
+		if (index >= 0 && (uint32_t)index < capacity) {
+			if (bitmap_test_and_set(index, bitmap) == 0)
+				return index;
+		} else {
+			return -1;
+		}
+	} while (1);
+}
+
+#define bitmap_for_each(index, bitmap, _bitmap, capacity)	\
+	for (_bitmap = bitmap, index = bsfq(_bitmap);		\
+	     _bitmap != 0 && index < capacity;			\
+	     _bitmap &= ~(1UL << index), index = bsfq(_bitmap))
+
 #endif /* BITS_H*/

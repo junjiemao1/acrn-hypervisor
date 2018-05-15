@@ -54,4 +54,7 @@ void free(void *ptr);
 
 void *alloc_per_cpu_data(int nr_cpus);
 
+struct dev_handler_node *alloc_dev_handler_node(int irq);
+void free_dev_handler_node(int irq, struct dev_handler_node *node);
+
 #endif /* MEM_MGT_H_ */

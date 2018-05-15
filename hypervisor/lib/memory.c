@@ -317,11 +317,59 @@ void *alloc_per_cpu_data(int nr_cpus __unused)
 	return _ld_cpu_data_start;
 }
 
+DEFINE_POOL(struct dev_handler_node, dev_handler_pool,
+	    NR_MAX_IRQS, CONFIG_NR_HANDLERS_PER_IRQ);
+
+struct dev_handler_node *
+alloc_dev_handler_node(int irq)
+{
+	struct dev_handler_node *node = NULL;
+	int32_t slot_idx;
+
+	if (irq >= 0 || irq < NR_MAX_IRQS) {
+		slot_idx =
+			bitmap_find_first_zero_and_set(
+				dev_handler_pool.free_bitmap + irq,
+				CONFIG_NR_HANDLERS_PER_IRQ);
+
+		if (slot_idx >= 0) {
+			node = dev_handler_pool.slots[irq] + slot_idx;
+		}
+	}
+
+	return node;
+}
+
+void free_dev_handler_node(int irq, struct dev_handler_node *node) {
+	uint64_t idx, _bitmap;
+	uint64_t *bitmap = dev_handler_pool.free_bitmap + irq;
+
+	bitmap_for_each(idx, *bitmap, _bitmap,
+			CONFIG_NR_HANDLERS_PER_IRQ) {
+		if (dev_handler_pool.slots[irq] + idx == node) {
+			bitmap_clr(idx, bitmap);
+			break;
+		}
+	}
+}
+
 #else /* CONFIG_NO_MALLOC */
 
 void *alloc_per_cpu_data(int nr_cpus)
 {
 	return malloc(PER_CPU_DATA_SIZE * pcpu_num);
+}
+
+struct dev_handler_node *
+alloc_dev_handler_node(int irq __unused)
+{
+	return malloc(sizeof(struct dev_handler_node));
+}
+
+void
+free_dev_handler_node(int irq __unused, struct dev_handler_node *node)
+{
+	free(node);
 }
 
 #endif  /* CONFIG_NO_MALLOC */
