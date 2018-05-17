@@ -971,11 +971,6 @@ vlapic_icrlo_write_handler(struct vlapic *vlapic)
 	mode = icrval & APIC_DELMODE_MASK;
 	phys = ((icrval & APIC_DESTMODE_LOG) == 0);
 
-#ifdef CONFIG_EFI_STUB
-	if (sipi_from_efi_boot_service_exit(dest, mode, vec))
-		return 0;
-#endif
-
 	if (mode == APIC_DELMODE_FIXED && vec < 16) {
 		vlapic_set_error(vlapic, APIC_ESR_SEND_ILLEGAL_VECTOR);
 		dev_dbg(ACRN_DBG_LAPIC, "Ignoring invalid IPI %d", vec);
@@ -1049,7 +1044,11 @@ vlapic_icrlo_write_handler(struct vlapic *vlapic)
 			/* put target vcpu to INIT state and wait for SIPI */
 			pause_vcpu(target_vcpu, VCPU_PAUSED);
 			reset_vcpu(target_vcpu);
-			target_vcpu->arch_vcpu.nr_sipi = 2;
+			/* new cpu model only need one SIPI to kick AP run,
+			 * the second SIPI will be ignored as it move out of
+			 * wait-for-SIPI state.
+			 */
+			target_vcpu->arch_vcpu.nr_sipi = 1;
 
 			return 0;
 		}
