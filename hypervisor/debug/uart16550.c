@@ -161,10 +161,10 @@ static int uart16550_init(struct tgt_uart *tgt_uart)
 		status = -ENODEV;
 	} else {
 		if (strcmp(tgt_uart->uart_id, "STDIO") == 0) {
-			atomic_set_int(&tgt_uart->open_count, 0);
+			atomic_store(&tgt_uart->open_count, 0);
 		} else {
 			/* set open count to 1 to prevent open */
-			atomic_set_int(&tgt_uart->open_count, 1);
+			atomic_store(&tgt_uart->open_count, 1);
 			status = -EINVAL;
 		}
 	}
@@ -179,7 +179,7 @@ static int uart16550_open(struct tgt_uart *tgt_uart,
 	int status = 0;
 
 	if (strcmp(tgt_uart->uart_id, "STDIO") == 0) {
-		if (atomic_cmpxchg_int(&tgt_uart->open_count, 0, 1) != 0)
+		if (atomic_cmpxchg(&tgt_uart->open_count, 0, 1) != 0)
 			return -EBUSY;
 
 		/* Call UART setup function */
@@ -264,7 +264,7 @@ static int uart16550_get_rx_err(uint32_t rx_data)
 static void uart16550_close(struct tgt_uart *tgt_uart)
 {
 	if (tgt_uart != NULL) {
-		if (atomic_cmpxchg_int(&tgt_uart->open_count, 1, 0) == 1) {
+		if (atomic_cmpxchg(&tgt_uart->open_count, 1, 0) == 1) {
 			/* TODO: Add logic to disable the UART */
 		}
 	}

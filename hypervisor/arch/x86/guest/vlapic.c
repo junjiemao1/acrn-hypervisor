@@ -484,7 +484,7 @@ vlapic_get_lvt(struct vlapic *vlapic, uint32_t offset)
 	uint32_t val;
 
 	idx = lvt_off_to_idx(offset);
-	val = atomic_load_acq_32(&vlapic->lvt_last[idx]);
+	val = atomic_load((int *)&vlapic->lvt_last[idx]);
 	return val;
 }
 
@@ -528,8 +528,7 @@ vlapic_lvt_write_handler(struct vlapic *vlapic, uint32_t offset)
 		if ((last & APIC_LVT_M) && ((val & APIC_LVT_M) == 0)) {
 			if (vlapic->vm->vpic_wire_mode == VPIC_WIRE_INTR ||
 				vlapic->vm->vpic_wire_mode == VPIC_WIRE_NULL) {
-				atomic_set_int(&vlapic->vm->vpic_wire_mode,
-						VPIC_WIRE_LAPIC);
+				vlapic->vm->vpic_wire_mode = VPIC_WIRE_LAPIC;
 				dev_dbg(ACRN_DBG_LAPIC,
 					"vpic wire mode -> LAPIC");
 			} else {
@@ -539,8 +538,7 @@ vlapic_lvt_write_handler(struct vlapic *vlapic, uint32_t offset)
 		/* unmask -> mask: only from the vlapic LINT0-ExtINT enabled */
 		} else if (((last & APIC_LVT_M) == 0) && (val & APIC_LVT_M)) {
 			if (vlapic->vm->vpic_wire_mode == VPIC_WIRE_LAPIC) {
-				atomic_set_int(&vlapic->vm->vpic_wire_mode,
-						VPIC_WIRE_NULL);
+				vlapic->vm->vpic_wire_mode = VPIC_WIRE_NULL;
 				dev_dbg(ACRN_DBG_LAPIC,
 						"vpic wire mode -> NULL");
 			}
@@ -549,7 +547,7 @@ vlapic_lvt_write_handler(struct vlapic *vlapic, uint32_t offset)
 		vlapic_update_lvtt(vlapic, val);
 
 	*lvtptr = val;
-	atomic_store_rel_32(&vlapic->lvt_last[idx], val);
+	atomic_store((int *)&vlapic->lvt_last[idx], val);
 }
 
 static void
@@ -1099,7 +1097,7 @@ vlapic_pending_intr(struct vlapic *vlapic, int *vecptr)
 	irrptr = &lapic->irr[0];
 
 	for (i = 7; i >= 0; i--) {
-		val = atomic_load_acq_int(&irrptr[i].val);
+		val = atomic_load((int *)&irrptr[i].val);
 		bitpos = fls(val);
 		if (bitpos >= 0) {
 			vector = i * 32 + bitpos;
@@ -1174,8 +1172,7 @@ vlapic_svr_write_handler(struct vlapic *vlapic)
 			vlapic_mask_lvts(vlapic);
 			/* the only one enabled LINT0-ExtINT vlapic disabled */
 			if (vlapic->vm->vpic_wire_mode == VPIC_WIRE_NULL) {
-				atomic_set_int(&vlapic->vm->vpic_wire_mode,
-					 VPIC_WIRE_INTR);
+				vlapic->vm->vpic_wire_mode = VPIC_WIRE_INTR;
 				dev_dbg(ACRN_DBG_LAPIC,
 					"vpic wire mode -> INTR");
 			}
@@ -1995,7 +1992,7 @@ apicv_set_intr_ready(struct vlapic *vlapic, int vector, __unused bool level)
 	mask = 1UL << (vector % 64);
 
 	atomic_set_long(&pir_desc->pir[idx], mask);
-	notify = atomic_cmpset_long(&pir_desc->pending, 0, 1);
+	notify = (atomic_cmpxchg64((long *)&pir_desc->pending, 0, 1) == 0);
 	return notify;
 }
 
@@ -2010,7 +2007,7 @@ apicv_pending_intr(struct vlapic *vlapic, __unused int *vecptr)
 
 	pir_desc = vlapic->pir_desc;
 
-	pending = atomic_load_acq_long(&pir_desc->pending);
+	pending = atomic_load64((long *)&pir_desc->pending);
 	if (!pending)
 		return 0;
 
@@ -2112,7 +2109,7 @@ apicv_inject_pir(struct vlapic *vlapic)
 	struct lapic_reg *irr = NULL;
 
 	pir_desc = vlapic->pir_desc;
-	if (atomic_cmpset_long(&pir_desc->pending, 1, 0) == 0)
+	if (atomic_cmpxchg64((long *)&pir_desc->pending, 1, 0) != 1)
 		return;
 
 	pirval = 0;
@@ -2121,7 +2118,7 @@ apicv_inject_pir(struct vlapic *vlapic)
 	irr = &lapic->irr[0];
 
 	for (i = 0; i < 4; i++) {
-		val = atomic_readandclear_long(&pir_desc->pir[i]);
+		val = atomic_readandclear64((long *)&pir_desc->pir[i]);
 		if (val != 0) {
 			irr[i * 2].val |= val;
 			irr[(i * 2) + 1].val |= val >> 32;
