@@ -5,9 +5,9 @@ HV_CONFIG_MK := include/config.mk
 
 KCONFIG_DIR := $(BASEDIR)/../scripts/kconfig
 
-$(eval $(call check_dep_exec,python))
-$(eval $(call check_dep_exec,pip))
-$(eval $(call check_dep_pylib,kconfiglib))
+$(eval $(call check_dep_exec,python,BUILD_DEPS))
+$(eval $(call check_dep_exec,pip,BUILD_DEPS))
+$(eval $(call check_dep_pylib,kconfiglib,BUILD_DEPS))
 
 # This target invoke silentoldconfig to generate a .config only if a .config
 # does not exist. Useful as a dependency for source compilation.

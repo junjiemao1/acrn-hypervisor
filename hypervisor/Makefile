@@ -26,6 +26,7 @@ HV_FILE := acrn
 default: all
 
 include $(BASEDIR)/../scripts/deps.mk
+BUILD_DEPS :=
 
 include scripts/kconfig/kconfig.mk
 
