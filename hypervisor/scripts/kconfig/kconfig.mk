@@ -45,6 +45,12 @@ oldconfig:
 minimalconfig: $(HV_OBJDIR)/$(HV_CONFIG)
 	@python $(KCONFIG_DIR)/minimalconfig.py Kconfig $(HV_OBJDIR)/$(HV_CONFIG) $(HV_OBJDIR)/$(HV_DEFCONFIG)
 
+$(eval $(call check_dep_exec,python3,MENUCONFIG_DEPS))
+$(eval $(call check_dep_exec,pip3,MENUCONFIG_DEPS))
+$(eval $(call check_dep_py3lib,kconfiglib,MENUCONFIG_DEPS))
+menuconfig: $(MENUCONFIG_DEPS) $(HV_OBJDIR)/$(HV_CONFIG)
+	@python3 $(KCONFIG_DIR)/mconfig.py Kconfig $(HV_OBJDIR)/$(HV_CONFIG)
+
 -include $(HV_OBJDIR)/$(HV_CONFIG_MK)
 
 CFLAGS += -include $(HV_OBJDIR)/$(HV_CONFIG_H)

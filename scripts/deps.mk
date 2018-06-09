@@ -30,3 +30,19 @@ check_pylib_$(1):
 	     exit 1; \
 	 fi
 endef
+
+# usage: check_dep_py3lib <library name> <variable>
+#
+# Create a target that checks the existence of the specified python 3 library,
+# and append that target to the given variable.
+define check_dep_py3lib =
+$(2) += check_py3lib_$(1)
+check_py3lib_$(1):
+	@if ! pip3 list 2>/dev/null | grep $(1) > /dev/null 2>&1; then   \
+	     echo "******** Missing prerequisite tool ********"; \
+	     echo "The python3 library *$(1)* is not installed"; \
+	     echo "Please refer to the Getting Started Guide" \
+	          "for installation instructions"; \
+	     exit 1; \
+	 fi
+endef
