@@ -22,6 +22,7 @@ KCONFIG_DIR := $(BASEDIR)/../scripts/kconfig
 
 -include $(HV_OBJDIR)/$(HV_CONFIG_MK)
 $(eval $(call override_config,PLATFORM,sbl))
+$(eval $(call override_config,RELEASE,n))
 
 $(eval $(call check_dep_exec,python,BUILD_DEPS))
 $(eval $(call check_dep_exec,pip,BUILD_DEPS))
