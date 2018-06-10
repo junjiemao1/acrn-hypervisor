@@ -1,9 +1,27 @@
+# usage: override_config <symbol> <default>
+#
+# Given a configuration symbol (without the CONFIG_ prefix), this macro
+# overrides its value as follows.
+#    1. If a value is specified from command line, that value is used.
+#    2. If neither config.mk nor the command line specifies a value, the given
+#       default is used.
+define override_config =
+ifdef $(1)
+CONFIG_$(1) := $($(1))
+else ifndef CONFIG_$(1)
+CONFIG_$(1) := $(2)
+endif
+endef
+
 HV_CONFIG := .config
 HV_DEFCONFIG := defconfig
 HV_CONFIG_H := include/config.h
 HV_CONFIG_MK := include/config.mk
 
 KCONFIG_DIR := $(BASEDIR)/../scripts/kconfig
+
+-include $(HV_OBJDIR)/$(HV_CONFIG_MK)
+$(eval $(call override_config,PLATFORM,sbl))
 
 $(eval $(call check_dep_exec,python,BUILD_DEPS))
 $(eval $(call check_dep_exec,pip,BUILD_DEPS))
@@ -28,7 +46,9 @@ $(HV_OBJDIR)/$(HV_CONFIG_H): $(HV_OBJDIR)/$(HV_CONFIG)
 .PHONY: defconfig
 defconfig:
 	@mkdir -p $(HV_OBJDIR)
-	@python $(KCONFIG_DIR)/defconfig.py Kconfig arch/x86/configs/$(PLATFORM).config $(HV_OBJDIR)/$(HV_CONFIG)
+	@python $(KCONFIG_DIR)/defconfig.py Kconfig \
+		arch/x86/configs/$(CONFIG_PLATFORM).config \
+		$(HV_OBJDIR)/$(HV_CONFIG)
 
 # Use silentoldconfig to forcefully update the current .config, or generate a
 # new one if no previous .config exists. This target can be used as a
@@ -37,20 +57,22 @@ defconfig:
 .PHONY: oldconfig
 oldconfig:
 	@mkdir -p $(HV_OBJDIR)
-	@python $(KCONFIG_DIR)/silentoldconfig.py Kconfig $(HV_OBJDIR)/$(HV_CONFIG) PLATFORM_$(shell echo $(PLATFORM) | tr a-z A-Z)=y
+	@python $(KCONFIG_DIR)/silentoldconfig.py Kconfig \
+		$(HV_OBJDIR)/$(HV_CONFIG) \
+		PLATFORM_$(shell echo $(CONFIG_PLATFORM) | tr a-z A-Z)=y
 
 # Minimize the current .config. This target can be used to generate a defconfig
 # for future use.
 .PHONY: minimalconfig
 minimalconfig: $(HV_OBJDIR)/$(HV_CONFIG)
-	@python $(KCONFIG_DIR)/minimalconfig.py Kconfig $(HV_OBJDIR)/$(HV_CONFIG) $(HV_OBJDIR)/$(HV_DEFCONFIG)
+	@python $(KCONFIG_DIR)/minimalconfig.py Kconfig \
+		$(HV_OBJDIR)/$(HV_CONFIG) \
+		$(HV_OBJDIR)/$(HV_DEFCONFIG)
 
 $(eval $(call check_dep_exec,python3,MENUCONFIG_DEPS))
 $(eval $(call check_dep_exec,pip3,MENUCONFIG_DEPS))
 $(eval $(call check_dep_py3lib,kconfiglib,MENUCONFIG_DEPS))
 menuconfig: $(MENUCONFIG_DEPS) $(HV_OBJDIR)/$(HV_CONFIG)
 	@python3 $(KCONFIG_DIR)/mconfig.py Kconfig $(HV_OBJDIR)/$(HV_CONFIG)
-
--include $(HV_OBJDIR)/$(HV_CONFIG_MK)
 
 CFLAGS += -include $(HV_OBJDIR)/$(HV_CONFIG_H)
