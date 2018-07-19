@@ -113,23 +113,25 @@ enum vm_paging_mode get_vcpu_paging_mode(struct vcpu *vcpu)
 	struct run_context *cur_context =
 		&vcpu->arch_vcpu.contexts[vcpu->arch_vcpu.cur_context];
 	enum vm_cpu_mode cpu_mode;
+	enum vm_paging_mode level;
 
 	cpu_mode = get_vcpu_mode(vcpu);
 
 	if (cpu_mode == CPU_MODE_REAL) {
-		return PAGING_MODE_0_LEVEL;
-	}
-	else if (cpu_mode == CPU_MODE_PROTECTED) {
+		level = PAGING_MODE_0_LEVEL;
+	} else if (cpu_mode == CPU_MODE_PROTECTED) {
 		if ((cur_context->cr4 & CR4_PAE) != 0U) {
-			return PAGING_MODE_3_LEVEL;
+			level = PAGING_MODE_3_LEVEL;
+		} else if ((cur_context->cr0 & CR0_PG) != 0U) {
+			level = PAGING_MODE_2_LEVEL;
+		} else {
+			level = PAGING_MODE_0_LEVEL;
 		}
-		else if ((cur_context->cr0 & CR0_PG) != 0U) {
-			return PAGING_MODE_2_LEVEL;
-		}
-		return PAGING_MODE_0_LEVEL;
 	} else {	/* compatibility or 64bit mode */
-		return PAGING_MODE_4_LEVEL;
+		level = PAGING_MODE_4_LEVEL;
 	}
+
+	return level;
 }
 
 /* TODO: Add code to check for Revserved bits, SMAP and PKE when do translation

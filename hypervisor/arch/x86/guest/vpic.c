@@ -90,12 +90,7 @@ static void vpic_set_pinstate(struct vpic *vpic, uint8_t pin, bool newstate);
 
 static inline bool master_pic(struct vpic *vpic, struct pic *pic)
 {
-
-	if (pic == &vpic->pic[0]) {
-		return true;
-	} else {
-		return false;
-	}
+	return (pic == &vpic->pic[0]);
 }
 
 static inline uint8_t vpic_get_highest_isrpin(struct pic *pic)
@@ -110,9 +105,7 @@ static inline uint8_t vpic_get_highest_isrpin(struct pic *pic)
 			 * An IS bit that is masked by an IMR bit will not be
 			 * cleared by a non-specific EOI in Special Mask Mode.
 			 */
-			if ((pic->smm != 0U) && (pic->mask & bit) != 0U) {
-				continue;
-			} else {
+			if ((pic->smm == 0U) || ((pic->mask & bit) == 0U)) {
 				return pin;
 			}
 		}
@@ -254,6 +247,8 @@ static void vpic_notify_intr(struct vpic *vpic)
 
 static int vpic_icw1(struct vpic *vpic, struct pic *pic, uint8_t val)
 {
+	int32_t ret;
+
 	dev_dbg(ACRN_DBG_PIC, "vm 0x%x: pic icw1 0x%x\n",
 		vpic->vm, val);
 
@@ -267,19 +262,18 @@ static int vpic_icw1(struct vpic *vpic, struct pic *pic, uint8_t val)
 	pic->poll = false;
 	pic->smm = 0U;
 
-	if ((val & ICW1_SNGL) != 0) {
+	if ((val & ICW1_SNGL) != 0U) {
 		dev_dbg(ACRN_DBG_PIC, "vpic cascade mode required\n");
-		return -1;
-	}
-
-	if ((val & ICW1_IC4) == 0U) {
+		ret = -1;
+	} else if ((val & ICW1_IC4) == 0U) {
 		dev_dbg(ACRN_DBG_PIC, "vpic icw4 required\n");
-		return -1;
+		ret = -1;
+	} else {
+		pic->icw_num++;
+		ret = 0;
 	}
 
-	pic->icw_num++;
-
-	return 0;
+	return ret;
 }
 
 static int vpic_icw2(struct vpic *vpic, struct pic *pic, uint8_t val)
@@ -306,33 +300,38 @@ static int vpic_icw3(struct vpic *vpic, struct pic *pic, uint8_t val)
 
 static int vpic_icw4(struct vpic *vpic, struct pic *pic, uint8_t val)
 {
+	int32_t ret;
+
 	dev_dbg(ACRN_DBG_PIC, "vm 0x%x: pic icw4 0x%x\n",
 		vpic->vm, val);
 
-	if ((val & ICW4_8086) == 0U) {
+	if ((val & ICW4_8086) != 0U) {
+		if ((val & ICW4_AEOI) != 0U) {
+			pic->aeoi = true;
+		}
+
+		if ((val & ICW4_SFNM) != 0U) {
+			if (master_pic(vpic, pic)) {
+				pic->sfn = true;
+			} else {
+				dev_dbg(ACRN_DBG_PIC,
+				"Ignoring special fully nested mode "
+				"on slave pic: %#x",
+				val);
+			}
+		}
+
+		pic->icw_num = 0U;
+		pic->ready = true;
+		ret = 0;
+
+	} else {
 		dev_dbg(ACRN_DBG_PIC,
 			"vpic microprocessor mode required\n");
-		return -1;
+		ret = -1;
 	}
 
-	if ((val & ICW4_AEOI) != 0U) {
-		pic->aeoi = true;
-	}
-
-	if ((val & ICW4_SFNM) != 0U) {
-		if (master_pic(vpic, pic)) {
-			pic->sfn = true;
-		} else {
-			dev_dbg(ACRN_DBG_PIC,
-			"Ignoring special fully nested mode on slave pic: %#x",
-			val);
-		}
-	}
-
-	pic->icw_num = 0U;
-	pic->ready = true;
-
-	return 0;
+	return ret;
 }
 
 bool vpic_is_pin_mask(struct vpic *vpic, uint8_t virt_pin)
