@@ -29,6 +29,11 @@ config HYBRID
 	  one pre-launched VM, one pre-launched SOS VM and one post-launched Standard
 	  VM.
 
+config ACRN_UNIT_TEST
+	bool "ACRN Unit Test"
+	help
+	  This scenario will run one acrn_unit_test.
+
 endchoice
 
 config BOARD

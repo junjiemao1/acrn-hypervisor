@@ -57,6 +57,8 @@ else ifeq ($(CONFIG_INDUSTRY),y)
 SCENARIO_NAME := industry
 else ifeq ($(CONFIG_HYBRID),y)
 SCENARIO_NAME := hybrid
+else ifeq ($(CONFIG_ACRN_UNIT_TEST),y)
+SCENARIO_NAME := acrn_unit_test
 endif
 
 LD_IN_TOOL = scripts/genld.sh

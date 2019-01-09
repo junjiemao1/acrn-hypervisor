@@ -148,7 +148,6 @@ void init_pcpu_pre(uint16_t pcpu_id_args)
 		if (ret != 0) {
 			panic("Platform CAT info is incorrect!");
 		}
-
 	} else {
 		/* Switch this CPU to use the same page tables set-up by the
 		 * primary/boot CPU

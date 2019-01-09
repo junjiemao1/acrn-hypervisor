@@ -19,6 +19,7 @@
 #include <vm.h>
 #include <logmsg.h>
 #include <deprivilege_boot.h>
+#include <unit_test.h>
 
 #define ACRN_DBG_BOOT	6U
 
@@ -326,7 +327,8 @@ int32_t init_vm_boot_info(struct acrn_vm *vm)
 	if (is_sos_vm(vm) && (get_sos_boot_mode() == DEPRI_BOOT_MODE)) {
 		vm_sw_loader = depri_boot_sw_loader;
 	} else {
-		vm_sw_loader = direct_boot_sw_loader;
+		vm_sw_loader = unit_test_sw_loader;
+		/* vm_sw_loader = direct_boot_sw_loader; */
 		ret = init_general_vm_boot_info(vm);
 	}
 
