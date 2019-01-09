@@ -14,5 +14,6 @@
 #include <sbuf.h>
 #include <npk_log.h>
 #include <profiling.h>
+#include <unit_test.h>
 
 #endif /* HV_DEBUG_H */

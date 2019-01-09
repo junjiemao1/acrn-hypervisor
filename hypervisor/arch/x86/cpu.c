@@ -26,6 +26,7 @@
 #include <logmsg.h>
 #include <cat.h>
 #include <firmware.h>
+#include <hv_debug.h>
 
 #define CPU_UP_TIMEOUT		100U /* millisecond */
 #define CPU_DOWN_TIMEOUT	100U /* millisecond */
@@ -143,7 +144,6 @@ void init_pcpu_pre(uint16_t pcpu_id_args)
 		if (ret != 0) {
 			panic("Platform CAT info is incorrect!");
 		}
-
 	} else {
 		/* Switch this CPU to use the same page tables set-up by the
 		 * primary/boot CPU
@@ -234,6 +234,8 @@ void init_pcpu_post(uint16_t pcpu_id)
 		}
 
 		ASSERT(get_pcpu_id() == BOOT_CPU_ID, "");
+
+		unit_test_init();
 	} else {
 		pr_dbg("Core %hu is up", pcpu_id);
 

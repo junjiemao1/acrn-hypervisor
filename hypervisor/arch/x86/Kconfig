@@ -15,6 +15,11 @@ config LOGICAL_PARTITION
 	help
 	  This scenario will run two pre-launched VMs.
 
+config ACRN_UNIT_TEST
+	bool "ACRN Unit Test"
+	help
+	  This scenario will run one acrn_unit_test.
+
 endchoice
 
 config BOARD
