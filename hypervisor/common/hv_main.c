@@ -13,6 +13,7 @@
 #include <profiling.h>
 #include <trace.h>
 #include <logmsg.h>
+#include <shell.h>
 
 void vcpu_thread(struct sched_object *obj)
 {
@@ -82,8 +83,19 @@ void vcpu_thread(struct sched_object *obj)
 void default_idle(__unused struct sched_object *obj)
 {
 	uint16_t pcpu_id = get_pcpu_id();
+	struct acrn_vuart *vu;
 
 	while (1) {
+		if (pcpu_id == 0U) {
+			vu = vuart_console_active();
+			if (vu != NULL) {
+				vuart_console_rx_chars(vu);
+				vuart_console_tx_chars(vu);
+			} else {
+				shell_kick();
+			}
+		}
+
 		if (need_reschedule(pcpu_id)) {
 			schedule();
 		} else if (need_offline(pcpu_id) != 0) {
