@@ -103,4 +103,13 @@ struct shell {
 #define SHELL_CMD_WRMSR_PARAM		"[-p<pcpu_id>]	<msr_index> <value>"
 #define SHELL_CMD_WRMSR_HELP		"Write value (in hexadecimal) to the MSR at msr_index (in hexadecimal) for CPU"\
 					" ID pcpu_id"
+
+#define SHELL_CMD_START_TEST		"start_test"
+#define SHELL_CMD_START_TEST_PARAM	"<test ID>"
+#define SHELL_CMD_START_TEST_HELP	"start-test <test ID>, with <test ID> being a string"
+
+#define SHELL_CMD_STOP_TEST		"stop_test"
+#define SHELL_CMD_STOP_TEST_PARAM	NULL
+#define SHELL_CMD_STOP_TEST_HELP	"stop-test"
+
 #endif /* SHELL_PRIV_H */

@@ -7,6 +7,7 @@
 #include <types.h>
 #include <errno.h>
 #include <bits.h>
+#include <mmu.h>
 #include "shell_priv.h"
 #include <irq.h>
 #include <console.h>
@@ -48,6 +49,8 @@ static int32_t shell_cpuid(int32_t argc, char **argv);
 static int32_t shell_trigger_crash(int32_t argc, char **argv);
 static int32_t shell_rdmsr(int32_t argc, char **argv);
 static int32_t shell_wrmsr(int32_t argc, char **argv);
+static int shell_start_test(int argc, char **argv);
+static int shell_stop_test(__unused int argc, __unused char **argv);
 
 static struct shell_cmd shell_cmds[] = {
 	{
@@ -145,6 +148,18 @@ static struct shell_cmd shell_cmds[] = {
 		.cmd_param	= SHELL_CMD_WRMSR_PARAM,
 		.help_str	= SHELL_CMD_WRMSR_HELP,
 		.fcn		= shell_wrmsr,
+	},
+	{
+		.str		= SHELL_CMD_START_TEST,
+		.cmd_param	= SHELL_CMD_START_TEST_PARAM,
+		.help_str	= SHELL_CMD_START_TEST_HELP,
+		.fcn		= shell_start_test,
+	},
+	{
+		.str		= SHELL_CMD_STOP_TEST,
+		.cmd_param	= SHELL_CMD_STOP_TEST_PARAM,
+		.help_str	= SHELL_CMD_STOP_TEST_HELP,
+		.fcn		= shell_stop_test,
 	},
 };
 
@@ -1372,4 +1387,48 @@ static int32_t shell_wrmsr(int32_t argc, char **argv)
 	}
 
 	return ret;
+}
+
+static int shell_start_test(int argc, char **argv)
+{
+	struct acrn_vm *vm = get_vm_from_vmid(0U);
+
+	if (is_poweroff_vm(vm)) {
+		struct acrn_vm_config *vm_config = get_vm_config(0U);
+
+		char *buf = vm_config->os_config.bootargs;
+		size_t sz = MAX_BOOTARGS_SIZE;
+		int i;
+
+		buf[0] = '\0';
+		for (i = 1; i < argc; i++) {
+			size_t len = strnlen_s(argv[i], sz);
+			char ending = (i < argc - 1) ?  ' ' : '\0';
+
+			memcpy_s(buf, sz, argv[i], len);
+			buf[len] = ending;
+
+			sz -= len + 1;
+			buf += len + 1;
+		}
+
+		(void)prepare_vm(BOOT_CPU_ID, vm_config);
+	} else {
+		shell_puts("Unit test VM already exists.\r\n");
+	}
+
+	return 0;
+}
+
+static int shell_stop_test(__unused int argc, __unused char **argv)
+{
+	struct acrn_vm *vm = get_vm_from_vmid(0U);
+
+	if (!is_poweroff_vm(vm)) {
+		(void)shutdown_vm(vm);
+	} else {
+		shell_puts("Unit test VM does not exist.\r\n");
+	}
+
+	return 0;
 }
