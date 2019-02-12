@@ -105,10 +105,13 @@ uint64_t e820_alloc_low_memory(uint32_t size_arg)
 	return ret;
 }
 
+struct e820_entry mbi_reserved[3] = { 0 };
+uint32_t mbi_reserved_sorted_idx[3] = {0, 1, 2};
+
 /* HV read multiboot header to get e820 entries info and calc total RAM info */
 void init_e820(void)
 {
-	uint32_t i;
+	uint32_t i, j, e820_idx;
 
 	if (boot_regs[0] == MULTIBOOT_INFO_MAGIC) {
 		/*
@@ -133,11 +136,89 @@ void init_e820(void)
 			dev_dbg(ACRN_DBG_E820, "mmap length 0x%x addr 0x%x entries %d\n",
 				mbi->mi_mmap_length, mbi->mi_mmap_addr, e820_entries_count);
 
-			for (i = 0U; i < e820_entries_count; i++) {
-				e820[i].baseaddr = mmap[i].baseaddr;
-				e820[i].length = mmap[i].length;
-				e820[i].type = mmap[i].type;
+			/* Consider multiboot boot info, mods array and mods[0] as reserved */
+			mbi_reserved[0].baseaddr = round_page_down((uint64_t)boot_regs[1]);
+			mbi_reserved[0].length = round_page_up(sizeof(struct multiboot_info));
 
+			if ((mbi->mi_flags & MULTIBOOT_INFO_HAS_MODS) != 0U) {
+				struct multiboot_module *mods = (struct multiboot_module *)(uint64_t)mbi->mi_mods_addr;
+
+				mbi_reserved[1].baseaddr = round_page_down((uint64_t)mbi->mi_mods_addr);
+				mbi_reserved[1].length = round_page_up(mbi->mi_mods_count * sizeof(struct multiboot_module));
+
+				if (mbi->mi_mods_count > 0) {
+					mbi_reserved[2].baseaddr = round_page_down(mods[0].mm_mod_start);
+					mbi_reserved[2].length = round_page_up(mods[0].mm_mod_end - mods[0].mm_mod_start);
+				}
+			}
+
+			/* Sort mbi_reserved according to baseaddr */
+			for (i = 2U; i > 0U; i--) {
+				for (j = 0U; j < i; j++) {
+					uint32_t idx_j = mbi_reserved_sorted_idx[j];
+					uint32_t idx_j_next = mbi_reserved_sorted_idx[j + 1];
+					if (mbi_reserved[idx_j].baseaddr > mbi_reserved[idx_j_next].baseaddr) {
+						mbi_reserved_sorted_idx[j] = idx_j_next;
+						mbi_reserved_sorted_idx[j + 1] = idx_j;
+					}
+				}
+			}
+
+			i = 0U;
+			for (e820_idx = 0U; e820_idx < e820_entries_count; e820_idx++) {
+				uint64_t baseaddr = mmap[e820_idx].baseaddr;
+				uint64_t length = mmap[e820_idx].length;
+
+				if (mmap[e820_idx].type != E820_TYPE_RAM) {
+					e820[i].baseaddr = baseaddr;
+					e820[i].length = length;
+					e820[i].type = mmap[e820_idx].type;
+					i++;
+				} else {
+					/* Split this entry to avoid overwrting mbi */
+					for (j = 0U; j < 3U; j++) {
+						struct e820_entry *mbi_entry = &mbi_reserved[mbi_reserved_sorted_idx[j]];
+						uint64_t mbi_baseaddr = mbi_entry->baseaddr;
+						uint64_t mbi_length = mbi_entry->length;
+
+						if (mbi_baseaddr + mbi_length <= baseaddr) {
+							continue;
+						} else if (mbi_baseaddr >= baseaddr &&
+							   mbi_baseaddr + mbi_length <= baseaddr + length) {
+							if (mbi_baseaddr - baseaddr > 0UL) {
+								e820[i].baseaddr = baseaddr;
+								e820[i].length = mbi_baseaddr - baseaddr;
+								e820[i].type = E820_TYPE_RAM;
+								baseaddr = mbi_baseaddr;
+								length -= mbi_baseaddr - baseaddr;
+								i++;
+							}
+
+							e820[i].baseaddr = baseaddr;
+							e820[i].length = mbi_length;
+							e820[i].type = E820_TYPE_RESERVED;
+							baseaddr += mbi_length;
+							length -= mbi_length;
+							i++;
+						} else if (mbi_baseaddr >= baseaddr + length) {
+							break;
+						} else {
+							panic("mbi info overlaps multiple e820 entries!");
+						}
+					}
+
+					if (length > 0UL) {
+						e820[i].baseaddr = baseaddr;
+						e820[i].length = length;
+						e820[i].type = E820_TYPE_RAM;
+						i++;
+					}
+				}
+			}
+
+			e820_entries_count = i;
+
+			for (i = 0U; i < e820_entries_count; i++) {
 				dev_dbg(ACRN_DBG_E820, "mmap table: %d type: 0x%x\n", i, mmap[i].type);
 				dev_dbg(ACRN_DBG_E820, "Base: 0x%016llx length: 0x%016llx",
 					mmap[i].baseaddr, mmap[i].length);
