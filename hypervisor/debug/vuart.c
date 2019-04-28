@@ -534,6 +534,10 @@ void vuart_init(struct acrn_vm *vm, struct vuart_config *vu_config)
 		if (i != 0) {
 			vuart_setup_connection(vm, &vu_config[i], i);
 		}
+
+		if (console_vmid == ACRN_INVALID_VMID) {
+			console_vmid = vm->vm_id;
+		}
 	}
 }
 
