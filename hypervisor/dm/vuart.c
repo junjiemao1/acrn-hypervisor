@@ -36,6 +36,8 @@
 #include <vm.h>
 #include <logmsg.h>
 
+extern uint16_t console_vmid;
+
 #define vuart_lock_init(vu)	spinlock_init(&((vu)->lock))
 #define vuart_lock(vu)		spinlock_obtain(&((vu)->lock))
 #define vuart_unlock(vu)	spinlock_release(&((vu)->lock))
@@ -576,6 +578,10 @@ void vuart_init(struct acrn_vm *vm, struct vuart_config *vu_config)
 		 */
 		if (i != 0U) {
 			vuart_setup_connection(vm, &vu_config[i], i);
+		}
+
+		if (console_vmid == ACRN_INVALID_VMID) {
+			console_vmid = vm->vm_id;
 		}
 	}
 }
