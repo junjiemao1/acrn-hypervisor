@@ -1,5 +1,0 @@
-[Match]
-Name=acrn-br0
-
-[Network]
-DHCP=ipv4
