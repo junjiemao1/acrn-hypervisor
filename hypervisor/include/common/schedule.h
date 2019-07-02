@@ -19,7 +19,6 @@ struct sched_object;
 typedef void (*run_thread_t)(struct sched_object *obj);
 typedef void (*prepare_switch_t)(struct sched_object *obj);
 struct sched_object {
-	char name[16];
 	struct list_head run_list;
 	uint64_t host_sp;
 	run_thread_t thread;
@@ -41,7 +40,6 @@ void get_schedule_lock(uint16_t pcpu_id);
 void release_schedule_lock(uint16_t pcpu_id);
 
 void set_pcpu_used(uint16_t pcpu_id);
-uint16_t allocate_pcpu(void);
 void free_pcpu(uint16_t pcpu_id);
 
 void add_to_cpu_runqueue(struct sched_object *obj, uint16_t pcpu_id);
@@ -59,4 +57,3 @@ void run_sched_thread(struct sched_object *obj);
 
 void arch_switch_to(void *prev_sp, void *next_sp);
 #endif /* SCHEDULE_H */
-

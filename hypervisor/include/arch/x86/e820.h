@@ -11,10 +11,6 @@
 /* E820 memory types */
 #define E820_TYPE_RAM		1U	/* EFI 1, 2, 3, 4, 5, 6, 7 */
 #define E820_TYPE_RESERVED	2U
-/* EFI 0, 11, 12, 13 (everything not used elsewhere) */
-#define E820_TYPE_ACPI_RECLAIM	3U	/* EFI 9 */
-#define E820_TYPE_ACPI_NVS	4U	/* EFI 10 */
-#define E820_TYPE_UNUSABLE	5U	/* EFI 8 */
 
 #define E820_MAX_ENTRIES	32U
 

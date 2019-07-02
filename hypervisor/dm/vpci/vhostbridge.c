@@ -27,7 +27,6 @@
 * $FreeBSD$
 */
 
-
 /*_
 * Emulate a PCI Host bridge:
 * Intel Corporation Celeron N3350/Pentium N4200/Atom E3900
@@ -38,7 +37,6 @@
 #include <pci.h>
 #include <errno.h>
 #include "vpci_priv.h"
-
 
 /**
  * @pre vdev != NULL
@@ -96,7 +94,6 @@ void deinit_vhostbridge(__unused const struct pci_vdev *vdev)
 {
 }
 
-
 /**
  * @pre vdev != NULL
  * @pre vdev->vpci != NULL
@@ -114,7 +111,6 @@ int32_t vhostbridge_read_cfg(const struct pci_vdev *vdev, uint32_t offset,
 
 	return ret;
 }
-
 
 /**
  * @pre vdev != NULL

@@ -25,7 +25,4 @@ void init_vboot_irq(void);
 uint64_t get_ap_trampoline_buf(void);
 void *get_rsdp_ptr(void);
 
-enum vboot_mode get_sos_boot_mode(void);
-int32_t parse_hv_cmdline(void);
-
 #endif /* end of include guard: VBOOT_H */

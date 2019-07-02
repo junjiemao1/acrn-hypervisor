@@ -20,16 +20,11 @@
 /* TODO: add more capability per requirement */
 /* APICv features */
 #define VAPIC_FEATURE_VIRT_ACCESS	(1U << 0U)
-#define VAPIC_FEATURE_VIRT_REG		(1U << 1U)
-#define VAPIC_FEATURE_INTR_DELIVERY	(1U << 2U)
 #define VAPIC_FEATURE_TPR_SHADOW	(1U << 3U)
-#define VAPIC_FEATURE_POST_INTR		(1U << 4U)
 #define VAPIC_FEATURE_VX2APIC_MODE	(1U << 5U)
 
 /* BASIC features: must supported by the physical platform and will enabled by default */
 #define APICV_BASIC_FEATURE	(VAPIC_FEATURE_TPR_SHADOW | VAPIC_FEATURE_VIRT_ACCESS | VAPIC_FEATURE_VX2APIC_MODE)
-/* ADVANCED features: enable them by default if the physical platform support them all, otherwise, disable them all */
-#define APICV_ADVANCED_FEATURE	(VAPIC_FEATURE_VIRT_REG | VAPIC_FEATURE_INTR_DELIVERY | VAPIC_FEATURE_POST_INTR)
 
 static struct cpu_capability {
 	uint8_t apicv_features;
@@ -145,40 +140,6 @@ static void detect_ept_cap(void)
 	}
 }
 
-static void detect_apicv_cap(void)
-{
-	uint8_t features = 0U;
-	uint64_t msr_val;
-
-	msr_val = msr_read(MSR_IA32_VMX_PROCBASED_CTLS);
-	if (is_ctrl_setting_allowed(msr_val, VMX_PROCBASED_CTLS_TPR_SHADOW)) {
-		features |= VAPIC_FEATURE_TPR_SHADOW;
-	}
-
-	msr_val = msr_read(MSR_IA32_VMX_PROCBASED_CTLS2);
-	if (is_ctrl_setting_allowed(msr_val, VMX_PROCBASED_CTLS2_VAPIC)) {
-		features |= VAPIC_FEATURE_VIRT_ACCESS;
-	}
-	if (is_ctrl_setting_allowed(msr_val, VMX_PROCBASED_CTLS2_VX2APIC)) {
-		features |= VAPIC_FEATURE_VX2APIC_MODE;
-	}
-	if (is_ctrl_setting_allowed(msr_val, VMX_PROCBASED_CTLS2_VAPIC_REGS)) {
-		features |= VAPIC_FEATURE_VIRT_REG;
-	}
-	if (is_ctrl_setting_allowed(msr_val, VMX_PROCBASED_CTLS2_VIRQ)) {
-		features |= VAPIC_FEATURE_INTR_DELIVERY;
-	}
-
-	msr_val = msr_read(MSR_IA32_VMX_PINBASED_CTLS);
-	if (is_ctrl_setting_allowed(msr_val, VMX_PINBASED_CTLS_POST_IRQ)) {
-		features |= VAPIC_FEATURE_POST_INTR;
-	}
-
-	cpu_caps.apicv_features = features;
-
-	vlapic_set_apicv_ops();
-}
-
 static void detect_vmx_mmu_cap(void)
 {
 	uint64_t val;
@@ -191,7 +152,6 @@ static void detect_vmx_mmu_cap(void)
 
 static void detect_pcpu_cap(void)
 {
-	detect_apicv_cap();
 	detect_ept_cap();
 	detect_vmx_mmu_cap();
 }
@@ -224,7 +184,6 @@ void init_pcpu_capabilities(void)
 		model += ((eax >> 16U) & 0xfU) << 4U;
 	}
 	boot_cpu_data.model = (uint8_t)model;
-
 
 	cpuid(CPUID_EXTEND_FEATURE, &unused,
 		&boot_cpu_data.cpuid_leaves[FEAT_7_0_EBX],
@@ -266,11 +225,6 @@ static bool is_ept_supported(void)
 static inline bool is_apicv_basic_feature_supported(void)
 {
 	return ((cpu_caps.apicv_features & APICV_BASIC_FEATURE) == APICV_BASIC_FEATURE);
-}
-
-bool is_apicv_advanced_feature_supported(void)
-{
-	return ((cpu_caps.apicv_features & APICV_ADVANCED_FEATURE) == APICV_ADVANCED_FEATURE);
 }
 
 bool pcpu_has_vmx_ept_cap(uint32_t bit_mask)
@@ -348,7 +302,6 @@ static int32_t check_vmx_mmu_cap(void)
 
 	return ret;
 }
-
 
 /*
  * basic hardware capability check

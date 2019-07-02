@@ -15,8 +15,6 @@
 #include <sprintf.h>
 #include <logmsg.h>
 
-#define NUM_REMAIN_1G_PAGES	3UL
-
 static void prepare_bsp_gdt(struct acrn_vm *vm)
 {
 	size_t gdt_len;
@@ -131,21 +129,6 @@ static void prepare_loading_bzimage(struct acrn_vm *vm, struct acrn_vcpu *vcpu)
 	 */
 	for (i = 0U; i < NUM_GPRS; i++) {
 		vcpu_set_gpreg(vcpu, i, 0UL);
-	}
-
-	/* add "hugepagesz=1G hugepages=x" to cmdline for 1G hugepage
-	 * reserving. Current strategy is "total_mem_size in Giga -
-	 * remained 1G pages" for reserving.
-	 */
-	if (is_sos_vm(vm) && (bootargs_info->load_addr != NULL)) {
-		int64_t reserving_1g_pages;
-
-		reserving_1g_pages = (vm_config->memory.size >> 30U) - NUM_REMAIN_1G_PAGES;
-		if (reserving_1g_pages > 0) {
-			snprintf(dyn_bootargs, 100U, " hugepagesz=1G hugepages=%lld", reserving_1g_pages);
-			(void)copy_to_gpa(vm, dyn_bootargs, ((uint64_t)bootargs_info->load_addr
-				+ bootargs_info->size), (strnlen_s(dyn_bootargs, 99U) + 1U));
-		}
 	}
 
 	/* Create Zeropage and copy Physical Base Address of Zeropage

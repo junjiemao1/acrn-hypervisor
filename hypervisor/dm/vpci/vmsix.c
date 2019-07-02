@@ -38,7 +38,6 @@
 #include <logmsg.h>
 #include "vpci_priv.h"
 
-
 /**
  * @pre vdev != NULL
  */
@@ -46,19 +45,7 @@ static inline bool msixcap_access(const struct pci_vdev *vdev, uint32_t offset)
 {
 	bool ret = false;
 
-	if (has_msix_cap(vdev)) {
-		ret = in_range(offset, vdev->msix.capoff, vdev->msix.caplen);
-	}
-
 	return ret;
-}
-
-/**
- * @pre vdev != NULL
- */
-static inline bool msixtable_access(const struct pci_vdev *vdev, uint32_t offset)
-{
-	return in_range(offset, vdev->msix.table_offset, vdev->msix.table_count * MSIX_TABLE_ENTRY_SIZE);
 }
 
 /**
@@ -149,36 +136,6 @@ static int32_t vmsix_remap(const struct pci_vdev *vdev, bool enable)
 }
 
 /**
- * Do MSI-X remap for one MSI-X table entry only
- * @pre vdev != NULL
- * @pre vdev->pdev != NULL
- */
-static int32_t vmsix_remap_one_entry(const struct pci_vdev *vdev, uint32_t index, bool enable)
-{
-	uint32_t msgctrl;
-	int32_t ret;
-
-	/* disable MSI-X during configuration */
-	enable_disable_msix(vdev, false);
-
-	ret = vmsix_remap_entry(vdev, index, enable);
-	if (ret == 0) {
-		/* If MSI Enable is being set, make sure INTxDIS bit is set */
-		if (enable) {
-			enable_disable_pci_intx(vdev->pdev->bdf, false);
-		}
-
-		/* Restore MSI-X Enable bit */
-		msgctrl = pci_vdev_read_cfg(vdev, vdev->msix.capoff + PCIR_MSIX_CTRL, 2U);
-		if ((msgctrl & PCIM_MSIXCTRL_MSIX_ENABLE) == PCIM_MSIXCTRL_MSIX_ENABLE) {
-			pci_pdev_write_cfg(vdev->pdev->bdf, vdev->msix.capoff + PCIR_MSIX_CTRL, 2U, msgctrl);
-		}
-	}
-
-	return ret;
-}
-
-/**
  * @pre vdev != NULL
  */
 int32_t vmsix_read_cfg(const struct pci_vdev *vdev, uint32_t offset, uint32_t bytes, uint32_t *val)
@@ -232,130 +189,6 @@ int32_t vmsix_write_cfg(struct pci_vdev *vdev, uint32_t offset, uint32_t bytes, 
 
 /**
  * @pre vdev != NULL
- * @pre mmio != NULL
- */
-static void vmsix_table_rw(const struct pci_vdev *vdev, struct mmio_request *mmio, uint32_t offset)
-{
-	const struct msix_table_entry *entry;
-	uint32_t vector_control, entry_offset, table_offset, index;
-	bool message_changed = false;
-	bool unmasked;
-
-	/* Find out which entry it's accessing */
-	table_offset = offset - vdev->msix.table_offset;
-	index = table_offset / MSIX_TABLE_ENTRY_SIZE;
-
-	if (index < vdev->msix.table_count) {
-		entry = &vdev->msix.table_entries[index];
-		entry_offset = table_offset % MSIX_TABLE_ENTRY_SIZE;
-
-		if (mmio->direction == REQUEST_READ) {
-			(void)memcpy_s(&mmio->value, (size_t)mmio->size,
-					(void *)entry + entry_offset, (size_t)mmio->size);
-		} else {
-			/* Only DWORD and QWORD are permitted */
-			if ((mmio->size == 4U) || (mmio->size == 8U)) {
-				/* Save for comparison */
-				vector_control = entry->vector_control;
-
-				/*
-				 * Writing different value to Message Data/Addr?
-				 * PCI Spec: Software is permitted to fill in MSI-X Table entry DWORD fields
-				 * individually with DWORD writes, or software in certain cases is permitted
-				 * to fill in appropriate pairs of DWORDs with a single QWORD write
-				 */
-				if (entry_offset < offsetof(struct msix_table_entry, data)) {
-					uint64_t qword_mask = ~0UL;
-
-					if (mmio->size == 4U) {
-						qword_mask = (entry_offset == 0U) ?
-								0x00000000FFFFFFFFUL : 0xFFFFFFFF00000000UL;
-					}
-					message_changed = ((entry->addr & qword_mask) != (mmio->value & qword_mask));
-				} else {
-					if (entry_offset == offsetof(struct msix_table_entry, data)) {
-						message_changed = (entry->data != (uint32_t)mmio->value);
-					}
-				}
-
-				/* Write to pci_vdev */
-				(void)memcpy_s((void *)entry + entry_offset, (size_t)mmio->size,
-						&mmio->value, (size_t)mmio->size);
-
-				/* If MSI-X hasn't been enabled, do nothing */
-				if ((pci_vdev_read_cfg(vdev, vdev->msix.capoff + PCIR_MSIX_CTRL, 2U)
-						& PCIM_MSIXCTRL_MSIX_ENABLE) == PCIM_MSIXCTRL_MSIX_ENABLE) {
-
-					if ((((entry->vector_control ^ vector_control) & PCIM_MSIX_VCTRL_MASK) != 0U)
-							|| message_changed) {
-						unmasked = ((entry->vector_control & PCIM_MSIX_VCTRL_MASK) == 0U);
-						(void)vmsix_remap_one_entry(vdev, index, unmasked);
-					}
-				}
-			} else {
-				pr_err("%s, Only DWORD and QWORD are permitted", __func__);
-			}
-
-		}
-	} else {
-		pr_err("%s, invalid arguments %llx - %llx", __func__, mmio->value, mmio->address);
-	}
-
-}
-
-/**
- * @pre io_req != NULL
- * @pre handler_private_data != NULL
- */
-int32_t vmsix_table_mmio_access_handler(struct io_request *io_req, void *handler_private_data)
-{
-	struct mmio_request *mmio = &io_req->reqs.mmio;
-	struct pci_vdev *vdev;
-	int32_t ret = 0;
-	uint64_t offset;
-	void *hva;
-
-	vdev = (struct pci_vdev *)handler_private_data;
-	offset = mmio->address - vdev->msix.mmio_gpa;
-
-	if (msixtable_access(vdev, (uint32_t)offset)) {
-		vmsix_table_rw(vdev, mmio, (uint32_t)offset);
-	} else {
-		hva = hpa2hva(vdev->msix.mmio_hpa + offset);
-
-		/* Only DWORD and QWORD are permitted */
-		if ((mmio->size != 4U) && (mmio->size != 8U)) {
-			pr_err("%s, Only DWORD and QWORD are permitted", __func__);
-			ret = -EINVAL;
-		} else if (hva != NULL) {
-			stac();
-			/* MSI-X PBA and Capability Table could be in the same range */
-			if (mmio->direction == REQUEST_READ) {
-				/* mmio->size is either 4U or 8U */
-				if (mmio->size == 4U) {
-					mmio->value = (uint64_t)mmio_read32((const void *)hva);
-				} else {
-					mmio->value = mmio_read64((const void *)hva);
-				}
-			} else {
-				/* mmio->size is either 4U or 8U */
-				if (mmio->size == 4U) {
-					mmio_write32((uint32_t)(mmio->value), (void *)hva);
-				} else {
-					mmio_write64(mmio->value, (void *)hva);
-				}
-			}
-			clac();
-		} else {
-			/* No other state currently, do nothing */
-		}
-	}
-
-	return ret;
-}
-
-/**
- * @pre vdev != NULL
  * @pre vdev->pdev != NULL
  */
 void init_vmsix(struct pci_vdev *vdev)
@@ -368,10 +201,6 @@ void init_vmsix(struct pci_vdev *vdev)
 	vdev->msix.table_offset = pdev->msix.table_offset;
 	vdev->msix.table_count = pdev->msix.table_count;
 
-	if (has_msix_cap(vdev)) {
-		(void)memcpy_s((void *)&vdev->cfgdata.data_8[pdev->msix.capoff], pdev->msix.caplen,
-			(void *)&pdev->msix.cap[0U], pdev->msix.caplen);
-	}
 }
 
 /**
@@ -381,9 +210,4 @@ void init_vmsix(struct pci_vdev *vdev)
  */
 void deinit_vmsix(const struct pci_vdev *vdev)
 {
-	if (has_msix_cap(vdev)) {
-		if (vdev->msix.table_count != 0U) {
-			ptirq_remove_msix_remapping(vdev->vpci->vm, vdev->vbdf.value, vdev->msix.table_count);
-		}
-	}
 }

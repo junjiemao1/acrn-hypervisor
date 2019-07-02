@@ -28,8 +28,6 @@
  * Task State Segment (TSS) selectors are 16 bytes on x86-64 instead of 8 bytes.
  */
 #define X64_SEG_DESC_SIZE (0x8U)	/* In long mode SEG Descriptors are 8 bytes */
-#define X64_LDT_DESC_SIZE (0x10U)/* In long mode LDT Descriptors are 16 bytes */
-#define X64_TSS_DESC_SIZE (0x10U)/* In long mode TSS Descriptors are 16 bytes */
 
 /*****************************************************************************
  *
@@ -42,12 +40,6 @@
  *****************************************************************************/
 /* Number of global 8 byte segments descriptor(s) */
 #define    HOST_GDT_RING0_SEG_SELECTORS   (0x3U)	/* rsvd, code, data */
-/* Offsets of global 8 byte segment descriptors */
-#define    HOST_GDT_RING0_RSVD_SEL        (0x0000U)
-#define    HOST_GDT_RING0_CODE_SEL        (0x0008U)
-#define    HOST_GDT_RING0_DATA_SEL        (0x0010U)
-/* Number of global 16 byte LDT descriptor(s) */
-#define    HOST_GDT_RING0_TSS_SELECTORS   (0x1U)
 /* One for each CPU in the hypervisor. */
 
 /*****************************************************************************
@@ -61,10 +53,6 @@
 	(HOST_GDT_RING0_SEG_SELECTORS * X64_SEG_DESC_SIZE)
 /* Offset to start of LDT Descriptors */
 #define HOST_GDT_RING0_CPU_TSS_SEL (HOST_GDT_RING0_LDT_SEL)
-/* Size of the GDT */
-#define HOST_GDT_SIZE							\
-	(HOST_GDT_RING0_CPU_TSS_SEL +					\
-		(HOST_GDT_RING0_TSS_SELECTORS * X64_TSS_DESC_SIZE))
 
 #ifndef ASSEMBLER
 
@@ -80,7 +68,6 @@ struct tss_64_descriptor {
 		uint32_t low32_value;
 		uint32_t high32_value;
 		uint32_t base_addr_63_32;
-		uint32_t offset_12;
 } __aligned(8);
 
 /*****************************************************************************
@@ -111,22 +98,15 @@ struct host_gdt {
  */
 struct tss_64 {
 	uint32_t rsvd1;
-	uint64_t rsp0;
-	uint64_t rsp1;
-	uint64_t rsp2;
 	uint32_t rsvd2;
 	uint32_t rsvd3;
 	uint64_t ist1;
 	uint64_t ist2;
 	uint64_t ist3;
 	uint64_t ist4;
-	uint64_t ist5;
-	uint64_t ist6;
-	uint64_t ist7;
 	uint32_t rsvd4;
 	uint32_t rsvd5;
 	uint16_t rsvd6;
-	uint16_t io_map_base_addr;
 } __packed __aligned(16);
 
 /*

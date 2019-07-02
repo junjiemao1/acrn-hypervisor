@@ -148,15 +148,6 @@ uint32_t exec_vmread32(uint32_t field)
 	return (uint32_t)value;
 }
 
-uint16_t exec_vmread16(uint32_t field)
-{
-        uint64_t value;
-
-        value = exec_vmread64(field);
-
-        return (uint16_t)value;
-}
-
 void exec_vmwrite64(uint32_t field_full, uint64_t value)
 {
 	asm volatile (

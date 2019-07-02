@@ -15,41 +15,7 @@
 #include <vmx.h>
 #include <vcpu.h>
 
-#define VMX_VMENTRY_FAIL                0x80000000U
-
-#define APIC_ACCESS_OFFSET              0xFFFUL   /* 11:0, offset within the APIC page */
-#define APIC_ACCESS_TYPE                0xF000UL  /* 15:12, access type */
-#define TYPE_LINEAR_APIC_INST_READ      (0UL << 12U)
-#define TYPE_LINEAR_APIC_INST_WRITE     (1UL << 12U)
-
-static inline uint32_t vmx_eoi_exit(uint32_t vector)
-{
-	return (VMX_EOI_EXIT0_FULL + ((vector >> 6U) * 2U));
-}
-
-/* VM exit qulifications for APIC-access
- * Access type:
- *  0  = linear access for a data read during instruction execution
- *  1  = linear access for a data write during instruction execution
- *  2  = linear access for an instruction fetch
- *  3  = linear access (read or write) during event delivery
- *  10 = guest-physical access during event delivery
- *  15 = guest-physical access for an instructon fetch or during
- *       instruction execution
- */
-static inline uint64_t apic_access_type(uint64_t qual)
-{
-	return (qual & APIC_ACCESS_TYPE);
-}
-
-static inline uint64_t apic_access_offset(uint64_t qual)
-{
-	return (qual & APIC_ACCESS_OFFSET);
-}
-
-#define RFLAGS_C (1U<<0U)
-#define RFLAGS_Z (1U<<6U)
-#define RFLAGS_AC (1U<<18U)
+#define VMX_VMENTRY_FAIL		0x80000000U
 
 #define VMX_SUPPORT_UNRESTRICTED_GUEST (1U<<5U)
 

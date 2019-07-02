@@ -8,6 +8,5 @@
 #define SHELL_H
 
 void shell_init(void);
-void shell_kick(void);
 
 #endif /* SHELL_H */

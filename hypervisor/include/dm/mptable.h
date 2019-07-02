@@ -16,7 +16,7 @@
  *
  ************************************************************************/
 /**********************************/
-/* EXTERNAL VARIABLES             */
+/* EXTERNAL VARIABLES	     */
 /**********************************/
 #ifndef MPTABLE_H
 #define MPTABLE_H
@@ -41,9 +41,7 @@
 /* Configuration header defines */
 #define MPCH_SIG		"PCMP"
 #define MPCH_OEMID		"ACRN    "
-#define MPCH_OEMID_LEN          8U
-#define MPCH_PRODID             "Hypervisor  "
-#define MPCH_PRODID_LEN         12U
+#define MPCH_PRODID	     "Hypervisor  "
 
 /* Processor entry defines */
 #define MPEP_SIG_FAMILY		6U
@@ -54,14 +52,13 @@
 	 (MPEP_SIG_MODEL << 4U)	| \
 	 (MPEP_SIG_STEPPING))
 
-#define MPEP_FEATURES           0xBFEBFBFFU /* XXX Intel i7 */
+#define MPEP_FEATURES	   0xBFEBFBFFU /* XXX Intel i7 */
 
 /* Number of local intr entries */
 #define	MPEII_NUM_LOCAL_IRQ	2U
 
 /* Bus entry defines */
 #define MPE_NUM_BUSES		2U
-#define MPE_BUSNAME_LEN		6U
 #define MPE_BUSNAME_ISA		"ISA   "
 #define MPE_BUSNAME_PCI		"PCI   "
 

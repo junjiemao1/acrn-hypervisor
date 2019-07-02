@@ -49,14 +49,8 @@ void init_vboot(void)
 		for (i = 0U; i < BOOTLOADER_NUM; i++) {
 			if (strncmp(hpa2hva(mbi->mi_loader_name), vboot_bootloader_maps[i].bootloader_name,
 				strnlen_s(vboot_bootloader_maps[i].bootloader_name, BOOTLOADER_NAME_SIZE)) == 0) {
-				/* Only support two vboot mode */
-				if (vboot_bootloader_maps[i].mode == DEPRI_BOOT_MODE) {
-					vboot_ops = get_deprivilege_boot_ops();
-					sos_boot_mode = DEPRI_BOOT_MODE;
-				} else {
-					vboot_ops = get_direct_boot_ops();
-					sos_boot_mode = DIRECT_BOOT_MODE;
-				}
+				vboot_ops = get_direct_boot_ops();
+				sos_boot_mode = DIRECT_BOOT_MODE;
 				break;
 			}
 		}
@@ -71,12 +65,6 @@ void init_vboot(void)
 #ifdef CONFIG_ACPI_PARSE_ENABLED
 	acpi_fixup();
 #endif
-}
-
-/* @pre: vboot_ops != NULL */
-enum vboot_mode get_sos_boot_mode(void)
-{
-	return sos_boot_mode;
 }
 
 /* @pre: vboot_ops->get_ap_trampoline != NULL */

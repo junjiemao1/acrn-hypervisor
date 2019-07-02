@@ -98,11 +98,6 @@ bool is_pcpu_active(uint16_t pcpu_id)
 	return bitmap_test(pcpu_id, &pcpu_active_bitmap);
 }
 
-uint64_t get_active_pcpu_bitmap(void)
-{
-	return pcpu_active_bitmap;
-}
-
 void init_pcpu_pre(uint16_t pcpu_id_args)
 {
 	uint16_t pcpu_id = pcpu_id_args;
@@ -120,8 +115,6 @@ void init_pcpu_pre(uint16_t pcpu_id_args)
 		init_pcpu_capabilities();
 
 		init_pcpu_model_name();
-
-		load_pcpu_state_data();
 
 		/* Initialize the hypervisor paging */
 		init_e820();
@@ -144,7 +137,6 @@ void init_pcpu_pre(uint16_t pcpu_id_args)
 			panic("System IOAPIC info is incorrect!");
 		}
 
-		ret = init_cat_cap_info();
 		if (ret != 0) {
 			panic("Platform CAT info is incorrect!");
 		}
@@ -217,19 +209,12 @@ void init_pcpu_post(uint16_t pcpu_id)
 		/* Initialize interrupts */
 		init_interrupt(BOOT_CPU_ID);
 
-		timer_init();
 		setup_notification();
 		setup_posted_intr_notification();
 		init_pci_pdev_list();
 
 		if (init_iommu() != 0) {
 			panic("failed to initialize iommu!");
-		}
-
-		ptdev_init();
-
-		if (init_sgx() != 0) {
-			panic("failed to initialize sgx!");
 		}
 
 		/* Start all secondary cores */
@@ -244,8 +229,6 @@ void init_pcpu_post(uint16_t pcpu_id)
 
 		/* Initialize secondary processor interrupts. */
 		init_interrupt(pcpu_id);
-
-		timer_init();
 
 		/* Wait for boot processor to signal all secondary cores to continue */
 		wait_sync_change(&pcpu_sync, 0UL);
@@ -303,7 +286,6 @@ static void start_pcpu(uint16_t pcpu_id)
 	}
 }
 
-
 /**
  * @brief Start all cpus if the bit is set in mask except itself
  *
@@ -348,28 +330,6 @@ void wait_pcpus_offline(uint64_t mask)
 		udelay(10U);
 		timeout -= 10U;
 	}
-}
-
-void stop_pcpus(void)
-{
-	uint16_t pcpu_id;
-	uint64_t mask = 0UL;
-
-	for (pcpu_id = 0U; pcpu_id < phys_cpu_num; pcpu_id++) {
-		if (get_pcpu_id() == pcpu_id) {	/* avoid offline itself */
-			continue;
-		}
-
-		bitmap_set_nolock(pcpu_id, &mask);
-		make_pcpu_offline(pcpu_id);
-	}
-
-	/**
-	 * Timeout never occurs here:
-	 *   If target cpu received a NMI and panic, it has called cpu_dead and make_pcpu_offline success.
-	 *   If target cpu is running, an IPI will be delivered to it and then call cpu_dead.
-	 */
-	wait_pcpus_offline(mask);
 }
 
 void cpu_do_idle(void)
@@ -426,7 +386,7 @@ void wait_sync_change(uint64_t *sync, uint64_t wake_sync)
 	if (has_monitor_cap()) {
 		/* Wait for the event to be set using monitor/mwait */
 		asm volatile ("1: cmpq      %%rbx,(%%rax)\n"
-			      "   je        2f\n"
+			      "   je	2f\n"
 			      "   monitor\n"
 			      "   mwait\n"
 			      "   jmp       1b\n"
@@ -438,7 +398,7 @@ void wait_sync_change(uint64_t *sync, uint64_t wake_sync)
 	} else {
 		/* Wait for the event to be set using pause */
 		asm volatile ("1: cmpq      %%rbx,(%%rax)\n"
-			      "   je        2f\n"
+			      "   je	2f\n"
 			      "   pause\n"
 			      "   jmp       1b\n"
 			      "2:\n"
@@ -472,7 +432,6 @@ static void pcpu_xsave_init(void)
 	}
 }
 
-
 static void smpcall_write_msr_func(void *data)
 {
 	struct msr_data_struct *msr = (struct msr_data_struct *)data;
@@ -493,29 +452,4 @@ void msr_write_pcpu(uint32_t msr_index, uint64_t value64, uint16_t pcpu_id)
 		bitmap_set_nolock(pcpu_id, &mask);
 		smp_call_function(mask, smpcall_write_msr_func, &msr);
 	}
-}
-
-static void smpcall_read_msr_func(void *data)
-{
-	struct msr_data_struct *msr = (struct msr_data_struct *)data;
-
-	msr->read_val = msr_read(msr->msr_index);
-}
-
-uint64_t msr_read_pcpu(uint32_t msr_index, uint16_t pcpu_id)
-{
-	struct msr_data_struct msr = {0};
-	uint64_t mask = 0UL;
-	uint64_t ret = 0;
-
-	if (pcpu_id == get_pcpu_id()) {
-		ret = msr_read(msr_index);
-	} else {
-		msr.msr_index = msr_index;
-		bitmap_set_nolock(pcpu_id, &mask);
-		smp_call_function(mask, smpcall_read_msr_func, &msr);
-		ret = msr.read_val;
-	}
-
-	return ret;
 }

@@ -3,10 +3,10 @@ ENTRY(cpu_primary_start_32)
 MEMORY
 {
     /* Low 1MB of memory for secondary processor start-up */
-    lowram  :   ORIGIN = 0, LENGTH = CONFIG_LOW_RAM_SIZE
+    lowram  :   ORIGIN = 0, LENGTH = 0x00010000
 
     /* 32 MBytes of RAM for HV */
-    ram     :   ORIGIN = CONFIG_HV_RAM_START, LENGTH = CONFIG_HV_RAM_SIZE
+    ram     :   ORIGIN = 0x00400000, LENGTH = 0x0b800000
 }
 
 SECTIONS

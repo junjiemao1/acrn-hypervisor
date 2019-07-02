@@ -17,21 +17,6 @@
 #include <trace.h>
 #include <logmsg.h>
 
-void arch_fire_vhm_interrupt(void)
-{
-	/*
-	 * use vLAPIC to inject vector to SOS vcpu 0 if vlapic is enabled
-	 * otherwise, send IPI hardcoded to BOOT_CPU_ID
-	 */
-	struct acrn_vm *sos_vm;
-	struct acrn_vcpu *vcpu;
-
-	sos_vm = get_sos_vm();
-	vcpu = vcpu_from_vid(sos_vm, BOOT_CPU_ID);
-
-	vlapic_set_intr(vcpu, get_vhm_notification_vector(), LAPIC_TRIG_EDGE);
-}
-
 /**
  * @brief General complete-work for port I/O emulation
  *
@@ -55,7 +40,6 @@ emulate_pio_complete(struct acrn_vcpu *vcpu, const struct io_request *io_req)
 		vcpu_set_gpreg(vcpu, CPU_REG_RAX, rax);
 	}
 }
-
 
 /**
  * @brief The handler of VM exits on I/O instructions
@@ -93,117 +77,4 @@ int32_t pio_instr_vmexit_handler(struct acrn_vcpu *vcpu)
 	status = emulate_io(vcpu, io_req);
 
 	return status;
-}
-
-int32_t ept_violation_vmexit_handler(struct acrn_vcpu *vcpu)
-{
-	int32_t status = -EINVAL, ret;
-	uint64_t exit_qual;
-	uint64_t gpa;
-	struct io_request *io_req = &vcpu->req;
-	struct mmio_request *mmio_req = &io_req->reqs.mmio;
-
-	/* Handle page fault from guest */
-	exit_qual = vcpu->arch.exit_qualification;
-
-	io_req->io_type = REQ_MMIO;
-
-	/* Specify if read or write operation */
-	if ((exit_qual & 0x2UL) != 0UL) {
-		/* Write operation */
-		mmio_req->direction = REQUEST_WRITE;
-		mmio_req->value = 0UL;
-
-		/* XXX: write access while EPT perm RX -> WP */
-		if ((exit_qual & 0x38UL) == 0x28UL) {
-			io_req->io_type = REQ_WP;
-		}
-	} else {
-		/* Read operation */
-		mmio_req->direction = REQUEST_READ;
-
-		/* TODO: Need to determine how sign extension is determined for
-		 * reads
-		 */
-	}
-
-	/* Get the guest physical address */
-	gpa = exec_vmread64(VMX_GUEST_PHYSICAL_ADDR_FULL);
-
-	TRACE_2L(TRACE_VMEXIT_EPT_VIOLATION, exit_qual, gpa);
-
-	/* Adjust IPA appropriately and OR page offset to get full IPA of abort
-	 */
-	mmio_req->address = gpa;
-
-	ret = decode_instruction(vcpu);
-	if (ret > 0) {
-		mmio_req->size = (uint64_t)ret;
-		/*
-		 * For MMIO write, ask DM to run MMIO emulation after
-		 * instruction emulation. For MMIO read, ask DM to run MMIO
-		 * emulation at first.
-		 */
-
-		/* Determine value being written. */
-		if (mmio_req->direction == REQUEST_WRITE) {
-			status = emulate_instruction(vcpu);
-			if (status != 0) {
-				ret = -EFAULT;
-			}
-		}
-
-		if (ret > 0) {
-			status = emulate_io(vcpu, io_req);
-		}
-	} else {
-		if (ret == -EFAULT) {
-			pr_info("page fault happen during decode_instruction");
-			status = 0;
-		}
-	}
-
-	if (ret <= 0) {
-		pr_acrnlog("Guest Linear Address: 0x%016llx", exec_vmread(VMX_GUEST_LINEAR_ADDR));
-		pr_acrnlog("Guest Physical Address address: 0x%016llx", gpa);
-	}
-	return status;
-}
-
-/**
- * @brief Allow a VM to access a port I/O range
- *
- * This API enables direct access from the given \p vm to the port I/O space
- * starting from \p port_address to \p port_address + \p nbytes - 1.
- *
- * @param vm The VM whose port I/O access permissions is to be changed
- * @param port_address The start address of the port I/O range
- * @param nbytes The size of the range, in bytes
- */
-void allow_guest_pio_access(struct acrn_vm *vm, uint16_t port_address,
-		uint32_t nbytes)
-{
-	uint16_t address = port_address;
-	uint32_t *b;
-	uint32_t i;
-
-	b = (uint32_t *)vm->arch_vm.io_bitmap;
-	for (i = 0U; i < nbytes; i++) {
-		b[address >> 5U] &= ~(1U << (address & 0x1fU));
-		address++;
-	}
-}
-
-void deny_guest_pio_access(struct acrn_vm *vm, uint16_t port_address,
-		uint32_t nbytes)
-{
-	uint16_t address = port_address;
-	uint32_t *b;
-	uint32_t i;
-
-	b = (uint32_t *)vm->arch_vm.io_bitmap;
-	for (i = 0U; i < nbytes; i++) {
-		b[address >> 5U] |= (1U << (address & 0x1fU));
-		address++;
-	}
 }

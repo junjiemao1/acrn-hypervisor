@@ -75,21 +75,6 @@ bool check_cpu_security_cap(void)
 	return ret;
 }
 
-void cpu_l1d_flush(void)
-{
-	/*
-	 * 'skip_l1dfl_vmentry' will be true on platform that
-	 * is not affected by L1TF.
-	 *
-	 */
-	if (!skip_l1dfl_vmentry) {
-		if (pcpu_has_cap(X86_FEATURE_L1D_FLUSH)) {
-			msr_write(MSR_IA32_FLUSH_CMD, IA32_L1D_FLUSH);
-		}
-	}
-
-}
-
 #ifdef STACK_PROTECTOR
 static uint64_t get_random_value(void)
 {

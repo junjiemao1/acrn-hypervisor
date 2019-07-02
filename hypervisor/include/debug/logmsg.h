@@ -17,37 +17,9 @@
 #define LOG_INFO		5U
 #define LOG_DEBUG		6U
 
-/* Logging flags */
-#define LOG_FLAG_STDOUT		0x00000001U
-#define LOG_FLAG_MEMORY		0x00000002U
-#define LOG_FLAG_NPK		0x00000004U
-#define LOG_ENTRY_SIZE	80U
-/* Size of buffer used to store a message being logged,
- * should align to LOG_ENTRY_SIZE.
- */
-#define LOG_MESSAGE_MAX_SIZE	(4U * LOG_ENTRY_SIZE)
-
 #define ACRN_DBG_LAPICPT	5U
-#if defined(HV_DEBUG)
-
-extern uint16_t console_loglevel;
-extern uint16_t mem_loglevel;
-extern uint16_t npk_loglevel;
-
-void asm_assert(int32_t line, const char *file, const char *txt);
-
-#define ASSERT(x, ...) \
-	do { \
-		if (!(x)) {\
-			asm_assert(__LINE__, __FILE__, "fatal error");\
-		} \
-	} while (0)
-
-#else /* HV_DEBUG */
 
 #define ASSERT(x, ...)	do { } while (0)
-
-#endif /* HV_DEBUG */
 
 void init_logmsg(uint32_t flags);
 void do_logmsg(uint32_t severity, const char *fmt, ...);
@@ -59,7 +31,7 @@ void do_logmsg(uint32_t severity, const char *fmt, ...);
  *  @param fmt A pointer to the NUL terminated format string.
  *
  *  @return The number of characters actually written or a negative
- *          number if an error occurred.
+ *	  number if an error occurred.
  */
 
 void printf(const char *fmt, ...);
@@ -71,10 +43,8 @@ void printf(const char *fmt, ...);
  *  @param fmt A pointer to the NUL terminated format string.
  *  @param args The variable long argument list as va_list.
  *  @return The number of characters actually written or a negative
- *          number if an error occurred.
+ *	  number if an error occurred.
  */
-
-void vprintf(const char *fmt, va_list args);
 
 #ifndef pr_prefix
 #define pr_prefix

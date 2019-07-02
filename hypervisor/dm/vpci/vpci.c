@@ -36,7 +36,6 @@
 
 static void init_vdevs(const struct acrn_vm *vm);
 static void deinit_prelaunched_vm_vpci(const struct acrn_vm *vm);
-static void deinit_postlaunched_vm_vpci(const struct acrn_vm *vm);
 static void read_cfg(const struct acrn_vpci *vpci, union pci_bdf bdf, uint32_t offset, uint32_t bytes, uint32_t *val);
 static void write_cfg(const struct acrn_vpci *vpci, union pci_bdf bdf, uint32_t offset, uint32_t bytes, uint32_t val);
 
@@ -128,7 +127,6 @@ static bool pci_cfgdata_io_read(struct acrn_vm *vm, struct acrn_vcpu *vcpu, uint
 
 			switch (vm_config->load_order) {
 			case PRE_LAUNCHED_VM:
-			case SOS_VM:
 				read_cfg(vpci, pi->cached_bdf, pi->cached_reg + offset, bytes, &val);
 				break;
 
@@ -157,14 +155,12 @@ static bool pci_cfgdata_io_write(struct acrn_vm *vm, uint16_t addr, size_t bytes
 	uint16_t offset = addr - PCI_CONFIG_DATA;
 	struct acrn_vm_config *vm_config;
 
-
 	if (pi->cached_enable) {
 		if (vpci_is_valid_access(pi->cached_reg + offset, bytes)) {
 			vm_config = get_vm_config(vm->vm_id);
 
 			switch (vm_config->load_order) {
 			case PRE_LAUNCHED_VM:
-			case SOS_VM:
 				write_cfg(vpci, pi->cached_bdf, pi->cached_reg + offset, bytes, val);
 				break;
 
@@ -206,7 +202,6 @@ void vpci_init(struct acrn_vm *vm)
 	vm_config = get_vm_config(vm->vm_id);
 	switch (vm_config->load_order) {
 	case PRE_LAUNCHED_VM:
-	case SOS_VM:
 		vm->iommu = create_iommu_domain(vm->vm_id, hva2hpa(vm->arch_vm.nworld_eptp), 48U);
 		/* Build up vdev list for vm */
 		init_vdevs(vm);
@@ -244,13 +239,8 @@ void vpci_cleanup(const struct acrn_vm *vm)
 	vm_config = get_vm_config(vm->vm_id);
 	switch (vm_config->load_order) {
 	case PRE_LAUNCHED_VM:
-	case SOS_VM:
 		/* deinit function for both SOS and pre-launched VMs (consider sos also as pre-launched) */
 		deinit_prelaunched_vm_vpci(vm);
-		break;
-
-	case POST_LAUNCHED_VM:
-		deinit_postlaunched_vm_vpci(vm);
 		break;
 
 	default:
@@ -302,15 +292,6 @@ static void remove_vdev_pt_iommu_domain(const struct pci_vdev *vdev)
 	}
 }
 
-static struct pci_vdev *find_vdev_for_sos(union pci_bdf bdf)
-{
-	struct acrn_vm *vm;
-
-	vm = get_sos_vm();
-
-	return pci_find_vdev_by_pbdf(&vm->vpci, bdf);
-}
-
 /**
  * @pre vpci != NULL
  * @pre vpci->vm != NULL
@@ -319,13 +300,7 @@ static struct pci_vdev *find_vdev(const struct acrn_vpci *vpci, union pci_bdf bd
 {
 	struct pci_vdev *vdev;
 
-	if (is_prelaunched_vm(vpci->vm)) {
-		vdev = pci_find_vdev_by_vbdf(vpci, bdf);
-	} else if (is_sos_vm(vpci->vm)) {
-		vdev = find_vdev_for_sos(bdf);
-	} else {
-		vdev = NULL;
-	}
+	vdev = pci_find_vdev_by_vbdf(vpci, bdf);
 
 	return vdev;
 }
@@ -436,10 +411,6 @@ static void init_vdev_for_pdev(struct pci_pdev *pdev, const struct acrn_vm *vm)
 		 */
 		init_vdev_pt(vdev);
 
-		if (has_msix_cap(vdev)) {
-			vdev_pt_remap_msix_table_bar(vdev);
-		}
-
 		/*
 		 *  For pre-launched VM, the host bridge is fully virtualized and it does not have a physical
 		 * host bridge counterpart.
@@ -481,101 +452,6 @@ static void deinit_prelaunched_vm_vpci(const struct acrn_vm *vm)
 
 		if ((is_prelaunched_vm(vm) && !is_hostbridge(vdev)) || is_sos_vm(vm)) {
 			remove_vdev_pt_iommu_domain(vdev);
-		}
-	}
-}
-
-/**
- * @pre vm != NULL
- * @pre vm->vpci.pci_vdev_cnt <= CONFIG_MAX_PCI_DEV_NUM
- * @pre is_postlaunched_vm(vm) == true
- */
-static void deinit_postlaunched_vm_vpci(const struct acrn_vm *vm)
-{
-	struct acrn_vm *sos_vm;
-	uint32_t i;
-	struct pci_vdev *vdev;
-	int32_t ret;
-	/* PCI resources
-	 * 1) IOMMU domain switch
-	 * 2) Relese UOS MSI host IRQ/IRTE
-	 * 3) Update vdev info in SOS vdev
-	 * Cleanup mentioned above is  taken care when DM releases UOS resources
-	 * during a UOS reboot or shutdown
-	 * In the following cases, where DM does not get chance to cleanup
-	 * 1) DM crash/segfault
-	 * 2) SOS triple fault/hang
-	 * 3) SOS reboot before shutting down POST_LAUNCHED_VMs
-	 * ACRN must cleanup
-	 */
-	sos_vm = get_sos_vm();
-	for (i = 0U; i < sos_vm->vpci.pci_vdev_cnt; i++) {
-		vdev = (struct pci_vdev *)&(sos_vm->vpci.pci_vdevs[i]);
-
-		if (vdev->vpci->vm == vm) {
-			ret = move_pt_device(vm->iommu, sos_vm->iommu, (uint8_t)vdev->pdev->bdf.bits.b,
-					(uint8_t)(vdev->pdev->bdf.value & 0xFFU));
-			if (ret != 0) {
-				panic("failed to assign iommu device!");
-			}
-
-			deinit_vmsi(vdev);
-
-			deinit_vmsix(vdev);
-
-			/* Move vdev pointers back to SOS*/
-			vdev->vpci = (struct acrn_vpci *) &sos_vm->vpci;
-
-			/* vbdf equals to pbdf in sos */
-			vdev->vbdf.value = vdev->pdev->bdf.value;
-		}
-	}
-}
-
-/**
- * @pre target_vm != NULL
- */
-void vpci_set_ptdev_intr_info(const struct acrn_vm *target_vm, uint16_t vbdf, uint16_t pbdf)
-{
-	struct pci_vdev *vdev;
-	union pci_bdf bdf;
-
-	bdf.value = pbdf;
-	vdev = find_vdev_for_sos(bdf);
-	if (vdev == NULL) {
-		pr_err("%s, can't find PCI device for vm%d, vbdf (0x%x) pbdf (0x%x)", __func__,
-			target_vm->vm_id, vbdf, pbdf);
-	} else {
-		/* UOS may do BDF mapping */
-		vdev->vpci = (struct acrn_vpci *)&(target_vm->vpci);
-		vdev->vbdf.value = vbdf;
-		vdev->pdev->bdf.value = pbdf;
-	}
-}
-
-/**
- * @pre target_vm != NULL
- */
-void vpci_reset_ptdev_intr_info(const struct acrn_vm *target_vm, uint16_t vbdf, uint16_t pbdf)
-{
-	struct pci_vdev *vdev;
-	struct acrn_vm *vm;
-	union pci_bdf bdf;
-
-	bdf.value = pbdf;
-	vdev = find_vdev_for_sos(bdf);
-	if (vdev == NULL) {
-		pr_err("%s, can't find PCI device for vm%d, vbdf (0x%x) pbdf (0x%x)", __func__,
-			target_vm->vm_id, vbdf, pbdf);
-	} else {
-		/* Return this PCI device to SOS */
-		if (vdev->vpci->vm == target_vm) {
-			vm = get_sos_vm();
-
-			vdev->vpci = &vm->vpci;
-
-			/* vbdf equals to pbdf in sos */
-			vdev->vbdf.value = vdev->pdev->bdf.value;
 		}
 	}
 }

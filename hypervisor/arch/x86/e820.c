@@ -95,7 +95,7 @@ uint64_t e820_alloc_low_memory(uint32_t size_arg)
 		e820_mem.total_mem_size -= new_entry->length;
 		e820_entries_count++;
 
-	        ret = new_entry->baseaddr;
+		ret = new_entry->baseaddr;
 		break;
 	}
 

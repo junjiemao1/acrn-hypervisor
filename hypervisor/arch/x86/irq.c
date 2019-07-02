@@ -52,7 +52,7 @@ uint32_t alloc_irq_num(uint32_t req_irq)
 
 	if ((irq >= NR_IRQS) && (irq != IRQ_INVALID)) {
 		pr_err("[%s] invalid req_irq %u", __func__, req_irq);
-	        ret = IRQ_INVALID;
+		ret = IRQ_INVALID;
 	} else {
 		spinlock_irqsave_obtain(&irq_alloc_spinlock, &rflags);
 		if (irq == IRQ_INVALID) {
@@ -136,7 +136,7 @@ uint32_t alloc_irq_vector(uint32_t irq)
 		ret = vr;
 	} else {
 		pr_err("invalid irq[%u] to alloc vector", irq);
-	        ret = VECTOR_INVALID;
+		ret = VECTOR_INVALID;
 	}
 	return ret;
 }
@@ -277,7 +277,7 @@ uint32_t irq_to_vector(uint32_t irq)
 	if (irq < NR_IRQS) {
 		ret = irq_desc_array[irq].vector;
 	} else {
-	        ret = VECTOR_INVALID;
+		ret = VECTOR_INVALID;
 	}
 
 	return ret;
@@ -350,12 +350,6 @@ void dispatch_interrupt(const struct intr_excp_ctx *ctx)
 
 		if (vr == desc->vector &&
 			bitmap_test((uint16_t)(irq & 0x3FU), irq_alloc_bitmap + (irq >> 6U)) != 0U) {
-#ifdef PROFILING_ON
-			/* Saves ctx info into irq_desc */
-			desc->ctx_rip = ctx->rip;
-			desc->ctx_rflags = ctx->rflags;
-			desc->ctx_cs = ctx->cs;
-#endif
 			handle_irq(desc);
 		}
 	} else {
@@ -420,7 +414,6 @@ void init_default_irqs(uint16_t cpu_id)
 		/* we use ioapic only, disable legacy PIC */
 		disable_pic_irqs();
 		ioapic_setup_irqs();
-		init_softirq();
 	}
 }
 

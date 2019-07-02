@@ -30,8 +30,8 @@
 #define	CR4_RESERVED_MASK ~(CR4_VME | CR4_PVI | CR4_TSD | CR4_DE | CR4_PSE | \
 				CR4_PAE | CR4_MCE | CR4_PGE | CR4_PCE |     \
 				CR4_OSFXSR | CR4_PCIDE | CR4_OSXSAVE |       \
-				CR4_SMEP | CR4_FSGSBASE | CR4_VMXE |         \
-				CR4_OSXMMEXCPT | CR4_SMAP | CR4_PKE |        \
+				CR4_SMEP | CR4_FSGSBASE | CR4_VMXE |	 \
+				CR4_OSXMMEXCPT | CR4_SMAP | CR4_PKE |	\
 				CR4_SMXE | CR4_UMIP)
 
 static uint64_t cr0_always_on_mask;
@@ -97,19 +97,19 @@ static bool is_cr0_write_valid(struct acrn_vcpu *vcpu, uint64_t cr0)
  * thanks to "unrestricted guest" feature.
  *
  *   - PE (0)  Trapped to track cpu mode.
- *             Set the value according to the value from guest.
+ *	     Set the value according to the value from guest.
  *   - MP (1)  Flexible to guest
  *   - EM (2)  Flexible to guest
  *   - TS (3)  Flexible to guest
  *   - ET (4)  Flexible to guest
  *   - NE (5)  must always be 1
  *   - WP (16) Trapped to get if it inhibits supervisor level procedures to
- *             write into ro-pages.
+ *	     write into ro-pages.
  *   - AM (18) Flexible to guest
  *   - NW (29) Trapped to emulate cache disable situation
  *   - CD (30) Trapped to emulate cache disable situation
  *   - PG (31) Trapped to track cpu/paging mode.
- *             Set the value according to the value from guest.
+ *	     Set the value according to the value from guest.
  */
 static void vmx_write_cr0(struct acrn_vcpu *vcpu, uint64_t cr0)
 {
@@ -247,9 +247,9 @@ static bool is_cr4_write_valid(struct acrn_vcpu *vcpu, uint64_t cr4)
  *   - TSD (2) Flexible to guest
  *   - DE  (3) Flexible to guest
  *   - PSE (4) Trapped to track paging mode.
- *             Set the value according to the value from guest.
+ *	     Set the value according to the value from guest.
  *   - PAE (5) Trapped to track paging mode.
- *             Set the value according to the value from guest.
+ *	     Set the value according to the value from guest.
  *   - MCE (6) Trapped to hide from guest
  *   - PGE (7) Flexible to guest
  *   - PCE (8) Flexible to guest
@@ -260,8 +260,8 @@ static bool is_cr4_write_valid(struct acrn_vcpu *vcpu, uint64_t cr4)
  *   - PCIDE (17) Trapped to hide from guest
  *   - OSXSAVE (18) Flexible to guest
  *   - XSAVE (19) Flexible to guest
- *         We always keep align with physical cpu. So it's flexible to
- *         guest
+ *	 We always keep align with physical cpu. So it's flexible to
+ *	 guest
  *   - SMEP (20) Flexible to guest
  *   - SMAP (21) Flexible to guest
  *   - PKE (22) Flexible to guest
@@ -345,7 +345,6 @@ void init_cr0_cr4_host_mask(void)
 	/* Output CR0 mask value */
 	pr_dbg("CR0 guest-host mask value: 0x%016llx", cr0_host_owned_bits);
 
-
 	exec_vmwrite(VMX_CR4_GUEST_HOST_MASK, cr4_host_owned_bits);
 	/* Output CR4 mask value */
 	pr_dbg("CR4 guest-host mask value: 0x%016llx", cr4_host_owned_bits);
@@ -367,16 +366,6 @@ uint64_t vcpu_get_cr0(struct acrn_vcpu *vcpu)
 void vcpu_set_cr0(struct acrn_vcpu *vcpu, uint64_t val)
 {
 	vmx_write_cr0(vcpu, val);
-}
-
-uint64_t vcpu_get_cr2(const struct acrn_vcpu *vcpu)
-{
-	return vcpu->arch.contexts[vcpu->arch.cur_context].run_ctx.cr2;
-}
-
-void vcpu_set_cr2(struct acrn_vcpu *vcpu, uint64_t val)
-{
-	vcpu->arch.contexts[vcpu->arch.cur_context].run_ctx.cr2 = val;
 }
 
 uint64_t vcpu_get_cr4(struct acrn_vcpu *vcpu)

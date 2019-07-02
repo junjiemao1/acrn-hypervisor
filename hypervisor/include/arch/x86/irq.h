@@ -26,20 +26,11 @@
 
 /* vectors range for fixed vectors, usually for HV service */
 #define VECTOR_FIXED_START	0xE0U
-#define VECTOR_FIXED_END	0xFFU
 
 #define VECTOR_TIMER		0xEFU
 #define VECTOR_NOTIFY_VCPU	0xF0U
 #define VECTOR_POSTED_INTR	0xF2U
-#define VECTOR_VIRT_IRQ_VHM	0xF7U
-#define VECTOR_SPURIOUS		0xFFU
-#define VECTOR_HYPERVISOR_CALLBACK_VHM	0xF3U
 #define VECTOR_PMI			0xF4U
-
-/* the maximum number of msi entry is 2048 according to PCI
- * local bus specification
- */
-#define MAX_MSI_ENTRY 0x800U
 
 #define NR_MAX_VECTOR		0xFFU
 #define VECTOR_INVALID		(NR_MAX_VECTOR + 1U)
@@ -57,8 +48,6 @@
 #define ALL_CPUS_MASK		(uint32_t) (((uint32_t)1U << (uint32_t) get_pcpu_nums()) - (uint32_t)1U)
 
 #define IRQ_ALLOC_BITMAP_SIZE	INT_DIV_ROUNDUP(NR_IRQS, 64U)
-
-#define INVALID_INTERRUPT_PIN	0xffffffffU
 
 #define IRQF_NONE	(0U)
 #define IRQF_LEVEL	(1U << 1U)	/* 1: level trigger; 0: edge trigger */
@@ -101,12 +90,12 @@ uint32_t alloc_irq_num(uint32_t req_irq);
 uint32_t alloc_irq_vector(uint32_t irq);
 
 /* RFLAGS */
-#define HV_ARCH_VCPU_RFLAGS_IF              (1UL<<9U)
-#define HV_ARCH_VCPU_RFLAGS_RF              (1UL<<16U)
+#define HV_ARCH_VCPU_RFLAGS_IF	      (1UL<<9U)
+#define HV_ARCH_VCPU_RFLAGS_RF	      (1UL<<16U)
 
 /* Interruptability State info */
 #define HV_ARCH_VCPU_BLOCKED_BY_MOVSS       (1UL<<1U)
-#define HV_ARCH_VCPU_BLOCKED_BY_STI         (1UL<<0U)
+#define HV_ARCH_VCPU_BLOCKED_BY_STI	 (1UL<<0U)
 
 /**
  * @brief virtual IRQ
@@ -133,28 +122,6 @@ uint32_t alloc_irq_vector(uint32_t irq);
 int32_t vcpu_queue_exception(struct acrn_vcpu *vcpu, uint32_t vector_arg, uint32_t err_code_arg);
 
 /**
- * @brief Inject external interrupt to guest.
- *
- * @param[in] vcpu Pointer to vCPU.
- *
- * @return None
- *
- * @pre vcpu != NULL
- */
-void vcpu_inject_extint(struct acrn_vcpu *vcpu);
-
-/**
- * @brief Inject NMI to guest.
- *
- * @param[in] vcpu Pointer to vCPU.
- *
- * @return None
- *
- * @pre vcpu != NULL
- */
-void vcpu_inject_nmi(struct acrn_vcpu *vcpu);
-
-/**
  * @brief Inject general protection exeception(GP) to guest.
  *
  * @param[in] vcpu     Pointer to vCPU.
@@ -167,19 +134,6 @@ void vcpu_inject_nmi(struct acrn_vcpu *vcpu);
 void vcpu_inject_gp(struct acrn_vcpu *vcpu, uint32_t err_code);
 
 /**
- * @brief Inject page fault exeception(PF) to guest.
- *
- * @param[in] vcpu     Pointer to vCPU.
- * @param[in] addr     Address that result in PF.
- * @param[in] err_code Error Code to be injected.
- *
- * @return None
- *
- * @pre vcpu != NULL
- */
-void vcpu_inject_pf(struct acrn_vcpu *vcpu, uint64_t addr, uint32_t err_code);
-
-/**
  * @brief Inject invalid opcode exeception(UD) to guest.
  *
  * @param[in] vcpu Pointer to vCPU.
@@ -190,16 +144,6 @@ void vcpu_inject_pf(struct acrn_vcpu *vcpu, uint64_t addr, uint32_t err_code);
  */
 void vcpu_inject_ud(struct acrn_vcpu *vcpu);
 
-/**
- * @brief Inject stack fault exeception(SS) to guest.
- *
- * @param[in] vcpu Pointer to vCPU.
- *
- * @return None
- *
- * @pre vcpu != NULL
- */
-void vcpu_inject_ss(struct acrn_vcpu *vcpu);
 void vcpu_make_request(struct acrn_vcpu *vcpu, uint16_t eventid);
 
 /*
@@ -230,11 +174,6 @@ struct irq_desc {
 	uint32_t flags;		/**< flags for trigger mode/ptdev */
 
 	spinlock_t lock;
-#ifdef PROFILING_ON
-	uint64_t ctx_rip;
-	uint64_t ctx_rflags;
-	uint64_t ctx_cs;
-#endif
 };
 
 /**

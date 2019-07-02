@@ -16,7 +16,6 @@ typedef void (*pge_handler)(uint64_t *pgentry, uint64_t size);
  * host physical address width is 52
  */
 #define INVALID_HPA	(0x1UL << 52U)
-#define INVALID_GPA	(0x1UL << 52U)
 /* External Interfaces */
 /**
  * @brief EPT page tables destroy
@@ -42,31 +41,23 @@ uint64_t gpa2hpa(struct acrn_vm *vm, uint64_t gpa);
  * @param[in] vm the pointer that points to VM data structure
  * @param[in] gpa the specified guest-physical address
  * @param[out] size the pointer that returns the page size of
- *                  the page in which the gpa is
+ *		  the page in which the gpa is
  *
  * @retval hpa the host physical address mapping to the \p gpa
  * @retval INVALID_HPA the HPA of parameter gpa is unmapping
  */
 uint64_t local_gpa2hpa(struct acrn_vm *vm, uint64_t gpa, uint32_t *size);
 /**
- * @brief Translating from host-physical address to guest-physical address for SOS_VM
- *
- * @param[in] hpa the specified host-physical address
- *
- * @pre: the gpa and hpa are identical mapping in SOS.
- */
-uint64_t sos_vm_hpa2gpa(uint64_t hpa);
-/**
  * @brief Guest-physical memory region mapping
  *
  * @param[in] vm the pointer that points to VM data structure
  * @param[in] pml4_page The physical address of The EPTP
  * @param[in] hpa The specified start host physical address of host
- *                physical memory region that GPA will be mapped
+ *		physical memory region that GPA will be mapped
  * @param[in] gpa The specified start guest physical address of guest
- *                physical memory region that needs to be mapped
+ *		physical memory region that needs to be mapped
  * @param[in] size The size of guest physical memory region that needs
- *                 to be mapped
+ *		 to be mapped
  * @param[in] prot_orig The specified memory access right and memory type
  *
  * @return None
@@ -74,29 +65,12 @@ uint64_t sos_vm_hpa2gpa(uint64_t hpa);
 void ept_add_mr(struct acrn_vm *vm, uint64_t *pml4_page, uint64_t hpa,
 		uint64_t gpa, uint64_t size, uint64_t prot_orig);
 /**
- * @brief Guest-physical memory page access right or memory type updating
- *
- * @param[in] vm the pointer that points to VM data structure
- * @param[in] pml4_page The physical address of The EPTP
- * @param[in] gpa The specified start guest physical address of guest
- *            physical memory region whoes mapping needs to be updated
- * @param[in] size The size of guest physical memory region
- * @param[in] prot_set The specified memory access right and memory type
- *                     that will be set
- * @param[in] prot_clr The specified memory access right and memory type
- *                     that will be cleared
- *
- * @return None
- */
-void ept_modify_mr(struct acrn_vm *vm, uint64_t *pml4_page, uint64_t gpa,
-		uint64_t size, uint64_t prot_set, uint64_t prot_clr);
-/**
  * @brief Guest-physical memory region unmapping
  *
  * @param[in] vm the pointer that points to VM data structure
  * @param[in] pml4_page The physical address of The EPTP
  * @param[in] gpa The specified start guest physical address of guest
- *                physical memory region whoes mapping needs to be deleted
+ *		physical memory region whoes mapping needs to be deleted
  * @param[in] size The size of guest physical memory region
  *
  * @return None
@@ -123,7 +97,7 @@ void ept_flush_leaf_page(uint64_t *pge, uint64_t size);
  * @param[in] vm the pointer that points to VM data structure
  *
  * @retval If the current context of vm is SECURE_WORLD, return EPT pointer of
- *            secure world, otherwise return EPT pointer of normal world.
+ *	    secure world, otherwise return EPT pointer of normal world.
  */
 void *get_ept_entry(struct acrn_vm *vm);
 

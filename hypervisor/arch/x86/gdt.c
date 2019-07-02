@@ -19,7 +19,6 @@ static void set_tss_desc(struct tss_64_descriptor *desc,
 	u2 = tss_lo_32 & 0xFF000000U;
 	u3 = (tss_lo_32 & 0x00FF0000U) >> 16U;
 
-
 	desc->low32_value = u1 | (tss_limit & 0xFFFFU);
 	desc->base_addr_63_32 = tss_hi_32;
 	desc->high32_value = u2 | (type << 8U) | 0x8000U | u3;

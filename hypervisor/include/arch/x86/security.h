@@ -18,13 +18,10 @@
 
 #ifndef ASSEMBLER
 int32_t get_ibrs_type(void);
-void cpu_l1d_flush(void);
 bool check_cpu_security_cap(void);
 
 #ifdef STACK_PROTECTOR
 struct stack_canary {
-	/* Gcc generates extra code, using [fs:40] to access canary */
-	uint8_t reserved[40];
 	uint64_t canary;
 };
 void __stack_chk_fail(void);

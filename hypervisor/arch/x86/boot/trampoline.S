@@ -153,7 +153,6 @@ trampoline_start64:
     movq    main_entry(%rip), %rax
     jmp     *%rax
 
-
 /* main entry */
     .align  8
     .global main_entry

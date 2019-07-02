@@ -23,20 +23,13 @@ struct per_cpu_region {
 	/* vmxon_region MUST be 4KB-aligned */
 	uint8_t vmxon_region[PAGE_SIZE];
 	void *vmcs_run;
-#ifdef HV_DEBUG
-	uint64_t *sbuf[ACRN_SBUF_ID_MAX];
-	char logbuf[LOG_MESSAGE_MAX_SIZE];
-	uint32_t npk_log_ref;
-#endif
 	uint64_t irq_count[NR_IRQS];
-	uint64_t softirq_pending;
 	uint64_t spurious;
 	void *vcpu;
 	void *ever_run_vcpu;
 #ifdef STACK_PROTECTOR
 	struct stack_canary stk_canary;
 #endif
-	struct per_cpu_timers cpu_timers;
 	struct sched_context sched_ctx;
 	struct sched_object idle;
 	struct host_gdt gdt;
@@ -49,9 +42,6 @@ struct per_cpu_region {
 	uint32_t lapic_id;
 	uint32_t lapic_ldr;
 	struct smp_call_info_data smp_call_info;
-#ifdef PROFILING_ON
-	struct profiling_info_wrapper profiling_info;
-#endif
 	uint16_t shutdown_vm_id;
 } __aligned(PAGE_SIZE); /* per_cpu_region size aligned with PAGE_SIZE */
 

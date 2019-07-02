@@ -35,18 +35,13 @@
 
 #define RX_BUF_SIZE		256U
 #define TX_BUF_SIZE		8192U
-#define INVAILD_VUART_IDX	0xFFU
 
 #define COM1_BASE		0x3F8U
 #define COM2_BASE		0x2F8U
-#define COM3_BASE		0x3E8U
-#define COM4_BASE		0x2E8U
 #define INVALID_COM_BASE	0U
 
 #define COM1_IRQ		4U
 #define COM2_IRQ		3U
-#define COM3_IRQ		6U
-#define COM4_IRQ		7U
 
 struct vuart_fifo {
 	char *buf;
@@ -57,7 +52,6 @@ struct vuart_fifo {
 };
 
 struct acrn_vuart {
-	uint8_t data;		/* Data register (R/W) */
 	uint8_t ier;		/* Interrupt enable register (R/W) */
 	uint8_t lcr;		/* Line control register (R/W) */
 	uint8_t mcr;		/* Modem control register (R/W) */
@@ -84,9 +78,4 @@ struct acrn_vuart {
 void vuart_init(struct acrn_vm *vm, struct vuart_config *vu_config);
 void vuart_deinit(struct acrn_vm *vm);
 
-void vuart_putchar(struct acrn_vuart *vu, char ch);
-char vuart_getchar(struct acrn_vuart *vu);
-void vuart_toggle_intr(const struct acrn_vuart *vu);
-
-bool is_vuart_intx(struct acrn_vm *vm, uint32_t intx_pin);
 #endif /* VUART_H */

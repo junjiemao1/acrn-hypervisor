@@ -18,8 +18,6 @@
 
 #define EXCEPTION_ERROR_CODE_VALID  8U
 
-#define ACRN_DBG_INTR	6U
-
 #define EXCEPTION_CLASS_BENIGN	1
 #define EXCEPTION_CLASS_CONT	2
 #define EXCEPTION_CLASS_PF	3
@@ -121,39 +119,6 @@ void vcpu_make_request(struct acrn_vcpu *vcpu, uint16_t eventid)
 	}
 }
 
-/*
- * @retval true when INT is injected to guest.
- * @retval false when otherwise
- */
-static bool vcpu_do_pending_extint(const struct acrn_vcpu *vcpu)
-{
-	struct acrn_vm *vm;
-	struct acrn_vcpu *primary;
-	uint32_t vector;
-	bool ret = false;
-
-	vm = vcpu->vm;
-
-	/* check if there is valid interrupt from vPIC, if yes just inject it */
-	/* PIC only connect with primary CPU */
-	primary = vcpu_from_vid(vm, BOOT_CPU_ID);
-	if (vcpu == primary) {
-
-		vpic_pending_intr(vm_pic(vcpu->vm), &vector);
-		if (vector <= NR_MAX_VECTOR) {
-			dev_dbg(ACRN_DBG_INTR, "VPIC: to inject PIC vector %d\n",
-					vector & 0xFFU);
-			exec_vmwrite32(VMX_ENTRY_INT_INFO_FIELD,
-					VMX_INT_INFO_VALID |
-					(vector & 0xFFU));
-			vpic_intr_accepted(vm_pic(vcpu->vm), vector);
-			ret = true;
-		}
-	}
-
-	return ret;
-}
-
 /* SDM Vol3 -6.15, Table 6-4 - interrupt and exception classes */
 static int32_t get_excep_class(uint32_t vector)
 {
@@ -222,7 +187,7 @@ int32_t vcpu_queue_exception(struct acrn_vcpu *vcpu, uint32_t vector_arg, uint32
 static void vcpu_inject_exception(struct acrn_vcpu *vcpu, uint32_t vector)
 {
 	if (bitmap_test_and_clear_lock(ACRN_REQUEST_EXCP, &vcpu->arch.pending_req)) {
-	
+
 		if ((exception_type[vector] & EXCEPTION_ERROR_CODE_VALID) != 0U) {
 			exec_vmwrite32(VMX_ENTRY_EXCEPTION_ERROR_CODE,
 					vcpu->arch.exception_info.error);
@@ -267,22 +232,10 @@ static bool vcpu_inject_lo_exception(struct acrn_vcpu *vcpu)
 	/* high priority exception already be injected */
 	if (vector <= NR_MAX_VECTOR) {
 		vcpu_inject_exception(vcpu, vector);
-	        injected = true;
+		injected = true;
 	}
 
 	return injected;
-}
-
-/* Inject external interrupt to guest */
-void vcpu_inject_extint(struct acrn_vcpu *vcpu)
-{
-	vcpu_make_request(vcpu, ACRN_REQUEST_EXTINT);
-}
-
-/* Inject NMI to guest */
-void vcpu_inject_nmi(struct acrn_vcpu *vcpu)
-{
-	vcpu_make_request(vcpu, ACRN_REQUEST_NMI);
 }
 
 /* Inject general protection exception(#GP) to guest */
@@ -291,23 +244,10 @@ void vcpu_inject_gp(struct acrn_vcpu *vcpu, uint32_t err_code)
 	(void)vcpu_queue_exception(vcpu, IDT_GP, err_code);
 }
 
-/* Inject page fault exception(#PF) to guest */
-void vcpu_inject_pf(struct acrn_vcpu *vcpu, uint64_t addr, uint32_t err_code)
-{
-	vcpu_set_cr2(vcpu, addr);
-	(void)vcpu_queue_exception(vcpu, IDT_PF, err_code);
-}
-
 /* Inject invalid opcode exception(#UD) to guest */
 void vcpu_inject_ud(struct acrn_vcpu *vcpu)
 {
 	(void)vcpu_queue_exception(vcpu, IDT_UD, 0);
-}
-
-/* Inject stack fault exception(#SS) to guest */
-void vcpu_inject_ss(struct acrn_vcpu *vcpu)
-{
-	(void)vcpu_queue_exception(vcpu, IDT_SS, 0);
 }
 
 int32_t interrupt_window_vmexit_handler(struct acrn_vcpu *vcpu)
@@ -471,11 +411,6 @@ static inline bool acrn_inject_pending_intr(struct acrn_vcpu *vcpu,
 	bool guest_irq_enabled = is_guest_irq_enabled(vcpu);
 
 	if (guest_irq_enabled && (!ret)) {
-		/* Inject external interrupt first */
-		if (bitmap_test_and_clear_lock(ACRN_REQUEST_EXTINT, pending_req_bits)) {
-			/* has pending external interrupts */
-			ret = vcpu_do_pending_extint(vcpu);
-		}
 	}
 
 	if (bitmap_test_and_clear_lock(ACRN_REQUEST_EVENT, pending_req_bits)) {

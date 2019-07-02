@@ -16,22 +16,6 @@
  * @defgroup acrn_mem ACRN Memory Management
  * @{
  */
-/** The flag that indicates that the page fault was caused by a non present
- * page.
- */
-#define PAGE_FAULT_P_FLAG	0x00000001U
-/** The flag that indicates that the page fault was caused by a write access. */
-#define PAGE_FAULT_WR_FLAG	0x00000002U
-/** The flag that indicates that the page fault was caused in user mode. */
-#define PAGE_FAULT_US_FLAG	0x00000004U
-/** The flag that indicates that the page fault was caused by a reserved bit
- * violation.
- */
-#define PAGE_FAULT_RSVD_FLAG	0x00000008U
-/** The flag that indicates that the page fault was caused by an instruction
- * fetch.
- */
-#define PAGE_FAULT_ID_FLAG	0x00000010U
 
 /* Defines used for common memory sizes */
 #define MEM_1K		1024U
@@ -39,7 +23,6 @@
 #define MEM_4K		(MEM_1K * 4U)
 #define MEM_1M		(MEM_1K * 1024U)
 #define MEM_2M		(MEM_1M * 2U)
-#define MEM_1G		(MEM_1M * 1024U)
 
 #ifndef ASSEMBLER
 
@@ -50,9 +33,6 @@
 
 /* Define cache line size (in bytes) */
 #define CACHE_LINE_SIZE		64U
-
-/* IA32E Paging constants */
-#define IA32E_REF_MASK	((get_pcpu_info())->physical_address_mask)
 
 struct acrn_vcpu;
 static inline uint64_t round_page_up(uint64_t addr)
@@ -79,28 +59,23 @@ static inline uint64_t round_pde_down(uint64_t val)
  * @brief Page tables level in IA32 paging mode
  */
 enum _page_table_level {
-        /**
-         * @brief The PML4 level in the page tables
-         */
+	/**
+	 * @brief The PML4 level in the page tables
+	 */
 	IA32E_PML4 = 0,
-        /**
-         * @brief The Page-Directory-Pointer-Table level in the page tables
-         */
+	/**
+	 * @brief The Page-Directory-Pointer-Table level in the page tables
+	 */
 	IA32E_PDPT = 1,
-        /**
-         * @brief The Page-Directory level in the page tables
-         */
+	/**
+	 * @brief The Page-Directory level in the page tables
+	 */
 	IA32E_PD = 2,
-        /**
-         * @brief The Page-Table level in the page tables
-         */
+	/**
+	 * @brief The Page-Table level in the page tables
+	 */
 	IA32E_PT = 3,
 };
-
-/* Page size */
-#define PAGE_SIZE_4K	MEM_4K
-#define PAGE_SIZE_2M	MEM_2M
-#define PAGE_SIZE_1G	MEM_1G
 
 void sanitize_pte_entry(uint64_t *ptep);
 void sanitize_pte(uint64_t *pt_page);

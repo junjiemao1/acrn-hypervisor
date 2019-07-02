@@ -13,7 +13,6 @@ struct vm_exit_dispatch {
 };
 
 int32_t vmexit_handler(struct acrn_vcpu *vcpu);
-int32_t vmcall_vmexit_handler(struct acrn_vcpu *vcpu);
 int32_t cpuid_vmexit_handler(struct acrn_vcpu *vcpu);
 int32_t rdmsr_vmexit_handler(struct acrn_vcpu *vcpu);
 int32_t wrmsr_vmexit_handler(struct acrn_vcpu *vcpu);
@@ -37,19 +36,9 @@ static inline uint64_t vm_exit_cr_access_type(uint64_t exit_qual)
 	return (vm_exit_qualification_bit_mask(exit_qual, 5U, 4U) >> 4U);
 }
 
-static inline uint64_t vm_exit_cr_access_lmsw_op(uint64_t exit_qual)
-{
-	return (vm_exit_qualification_bit_mask(exit_qual, 6U, 6U) >> 6U);
-}
-
 static inline uint64_t vm_exit_cr_access_reg_idx(uint64_t exit_qual)
 {
 	return (vm_exit_qualification_bit_mask(exit_qual, 11U, 8U) >> 8U);
-}
-
-static inline uint64_t vm_exit_cr_access_lmsw_src_date(uint64_t exit_qual)
-{
-	return (vm_exit_qualification_bit_mask(exit_qual, 31U, 16U) >> 16U);
 }
 
 /* access IO Access Info using exit qualification field */
@@ -62,23 +51,6 @@ static inline uint64_t
 vm_exit_io_instruction_access_direction(uint64_t exit_qual)
 {
 	return (vm_exit_qualification_bit_mask(exit_qual, 3U, 3U) >> 3U);
-}
-
-static inline uint64_t vm_exit_io_instruction_is_string(uint64_t exit_qual)
-{
-	return (vm_exit_qualification_bit_mask(exit_qual, 4U, 4U) >> 4U);
-}
-
-static inline uint64_t
-vm_exit_io_instruction_is_rep_prefixed(uint64_t exit_qual)
-{
-	return (vm_exit_qualification_bit_mask(exit_qual, 5U, 5U) >> 5U);
-}
-
-static inline uint64_t
-vm_exit_io_instruction_is_operand_encoding(uint64_t exit_qual)
-{
-	return (vm_exit_qualification_bit_mask(exit_qual, 6U, 6U) >> 6U);
 }
 
 static inline uint64_t vm_exit_io_instruction_port_number(uint64_t exit_qual)

@@ -17,9 +17,9 @@ static inline void memcpy_erms(void *d, const void *s, size_t slen)
  *
  *   INPUTS
  *
- * @param[in] d        pointer to Destination address
+ * @param[in] d	pointer to Destination address
  * @param[in] dmax     maximum  length of dest
- * @param[in] s        pointer to Source address
+ * @param[in] s	pointer to Source address
  * @param[in] slen     maximum number of bytes of src to copy
  *
  * @return pointer to destination address.
@@ -52,7 +52,7 @@ void *memset(void *base, uint8_t v, size_t n)
 	 */
 	if ((base != NULL) && (n != 0U)) {
 		memset_erms(base, v, n);
-        }
+	}
 
 	return base;
 }

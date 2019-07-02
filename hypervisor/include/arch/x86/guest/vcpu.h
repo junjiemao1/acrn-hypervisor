@@ -14,39 +14,7 @@
 #define VCPU_H
 
 /* Number of GPRs saved / restored for guest in VCPU structure */
-#define NUM_GPRS                            16U
-#define GUEST_STATE_AREA_SIZE               512
-
-#define	CPU_CONTEXT_OFFSET_RAX			0U
-#define	CPU_CONTEXT_OFFSET_RCX			8U
-#define	CPU_CONTEXT_OFFSET_RDX			16U
-#define	CPU_CONTEXT_OFFSET_RBX			24U
-#define	CPU_CONTEXT_OFFSET_RSP			32U
-#define	CPU_CONTEXT_OFFSET_RBP			40U
-#define	CPU_CONTEXT_OFFSET_RSI			48U
-#define	CPU_CONTEXT_OFFSET_RDI			56U
-#define	CPU_CONTEXT_OFFSET_R8			64U
-#define	CPU_CONTEXT_OFFSET_R9			72U
-#define	CPU_CONTEXT_OFFSET_R10			80U
-#define	CPU_CONTEXT_OFFSET_R11			88U
-#define	CPU_CONTEXT_OFFSET_R12			96U
-#define	CPU_CONTEXT_OFFSET_R13			104U
-#define	CPU_CONTEXT_OFFSET_R14			112U
-#define	CPU_CONTEXT_OFFSET_R15			120U
-#define	CPU_CONTEXT_OFFSET_CR0			128U
-#define	CPU_CONTEXT_OFFSET_CR2			136U
-#define	CPU_CONTEXT_OFFSET_CR4			144U
-#define	CPU_CONTEXT_OFFSET_RIP			152U
-#define	CPU_CONTEXT_OFFSET_RFLAGS		160U
-#define	CPU_CONTEXT_OFFSET_IA32_SPEC_CTRL	168U
-#define	CPU_CONTEXT_OFFSET_IA32_EFER		176U
-#define	CPU_CONTEXT_OFFSET_EXTCTX_START		184U
-#define	CPU_CONTEXT_OFFSET_CR3			184U
-#define	CPU_CONTEXT_OFFSET_IDTR			192U
-#define	CPU_CONTEXT_OFFSET_LDTR			216U
-
-/*sizes of various registers within the VCPU data structure */
-#define VMX_CPU_S_FXSAVE_GUEST_AREA_SIZE    GUEST_STATE_AREA_SIZE
+#define NUM_GPRS			    16U
 
 #ifndef ASSEMBLER
 
@@ -125,14 +93,6 @@
  */
 /* End of virt_int_injection */
 
-#define save_segment(seg, SEG_NAME)				\
-{								\
-	(seg).selector = exec_vmread16(SEG_NAME##_SEL);		\
-	(seg).base = exec_vmread(SEG_NAME##_BASE);		\
-	(seg).limit = exec_vmread32(SEG_NAME##_LIMIT);		\
-	(seg).attr = exec_vmread32(SEG_NAME##_ATTR);		\
-}
-
 #define load_segment(seg, SEG_NAME)				\
 {								\
 	exec_vmwrite16(SEG_NAME##_SEL, (seg).selector);		\
@@ -143,15 +103,14 @@
 
 /* Define segments constants for guest */
 #define REAL_MODE_BSP_INIT_CODE_SEL     (0xf000U)
-#define REAL_MODE_DATA_SEG_AR           (0x0093U)
-#define REAL_MODE_CODE_SEG_AR           (0x009fU)
+#define REAL_MODE_DATA_SEG_AR	   (0x0093U)
+#define REAL_MODE_CODE_SEG_AR	   (0x009fU)
 #define PROTECTED_MODE_DATA_SEG_AR      (0xc093U)
-#define PROTECTED_MODE_CODE_SEG_AR      (0xc09bU)
-#define REAL_MODE_SEG_LIMIT             (0xffffU)
-#define PROTECTED_MODE_SEG_LIMIT        (0xffffffffU)
-#define DR7_INIT_VALUE                  (0x400UL)
-#define LDTR_AR                         (0x0082U) /* LDT, type must be 2, refer to SDM Vol3 26.3.1.2 */
-#define TR_AR                           (0x008bU) /* TSS (busy), refer to SDM Vol3 26.3.1.2 */
+#define REAL_MODE_SEG_LIMIT	     (0xffffU)
+#define PROTECTED_MODE_SEG_LIMIT	(0xffffffffU)
+#define DR7_INIT_VALUE		  (0x400UL)
+#define LDTR_AR			 (0x0082U) /* LDT, type must be 2, refer to SDM Vol3 26.3.1.2 */
+#define TR_AR			   (0x008bU) /* TSS (busy), refer to SDM Vol3 26.3.1.2 */
 
 #define foreach_vcpu(idx, vm, vcpu)				\
 	for ((idx) = 0U, (vcpu) = &((vm)->hw.vcpu_array[(idx)]);	\
@@ -198,19 +157,11 @@ struct run_context {
 	/** The guests CR registers 0, 2, 3 and 4. */
 	uint64_t cr0;
 
-	/* CPU_CONTEXT_OFFSET_CR2 =
-	*  offsetof(struct run_context, cr2) = 136
-	*/
-	uint64_t cr2;
 	uint64_t cr4;
 
 	uint64_t rip;
 	uint64_t rflags;
 
-	/* CPU_CONTEXT_OFFSET_IA32_SPEC_CTRL =
-	*  offsetof(struct run_context, ia32_spec_ctrl) = 168
-	*/
-	uint64_t ia32_spec_ctrl;
 	uint64_t ia32_efer;
 };
 
@@ -233,24 +184,6 @@ struct ext_context {
 	struct segment_sel fs;
 	struct segment_sel gs;
 
-	uint64_t ia32_star;
-	uint64_t ia32_lstar;
-	uint64_t ia32_fmask;
-	uint64_t ia32_kernel_gs_base;
-
-	uint64_t ia32_pat;
-	uint32_t ia32_sysenter_cs;
-	uint64_t ia32_sysenter_esp;
-	uint64_t ia32_sysenter_eip;
-	uint64_t ia32_debugctl;
-
-	uint64_t dr7;
-	uint64_t tsc_offset;
-
-	/* The 512 bytes area to save the FPU/MMX/SSE states for the guest */
-	uint64_t
-	fxstore_guest_area[VMX_CPU_S_FXSAVE_GUEST_AREA_SIZE / sizeof(uint64_t)]
-	__aligned(16);
 };
 
 /* 2 worlds: 0 for Normal World, 1 for Secure World */
@@ -273,14 +206,11 @@ struct cpu_context {
 	struct run_context run_ctx;
 	struct ext_context ext_ctx;
 
-	/* per world MSRs, need isolation between secure and normal world */
-	uint32_t world_msrs[NUM_WORLD_MSRS];
 };
 
 /* Intel SDM 24.8.2, the address must be 16-byte aligned */
 struct msr_store_entry {
 	uint32_t msr_index;
-	uint32_t reserved;
 	uint64_t value;
 } __aligned(16);
 
@@ -304,8 +234,6 @@ struct acrn_vcpu_arch {
 	/* per vcpu lapic */
 	struct acrn_vlapic vlapic;
 
-	struct acrn_vmtrr vmtrr;
-
 	int32_t cur_context;
 	struct cpu_context contexts[NR_WORLD];
 
@@ -323,7 +251,6 @@ struct acrn_vcpu_arch {
 		uint32_t error;
 	} exception_info;
 
-	uint8_t lapic_mask;
 	bool irq_window_enabled;
 	uint32_t nrexits;
 
@@ -367,18 +294,11 @@ struct acrn_vcpu {
 	bool launched; /* Whether the vcpu is launched on target pcpu */
 	uint32_t running; /* vcpu is picked up and run? */
 
-	struct instr_emul_ctxt inst_ctxt;
 	struct io_request req; /* used by io/ept emulation */
 
 	uint64_t reg_cached;
 	uint64_t reg_updated;
 } __aligned(PAGE_SIZE);
-
-struct vcpu_dump {
-	struct acrn_vcpu *vcpu;
-	char *str;
-	uint32_t str_max;
-};
 
 static inline bool is_vcpu_bsp(const struct acrn_vcpu *vcpu)
 {
@@ -451,17 +371,6 @@ uint64_t vcpu_get_rip(struct acrn_vcpu *vcpu);
  * @return None
  */
 void vcpu_set_rip(struct acrn_vcpu *vcpu, uint64_t val);
-
-/**
- * @brief get vcpu RSP value
- *
- * Get & cache target vCPU's RSP in run_context.
- *
- * @param[in] vcpu pointer to vcpu data structure
- *
- * @return the value of RSP.
- */
-uint64_t vcpu_get_rsp(struct acrn_vcpu *vcpu);
 
 /**
  * @brief set vcpu RSP value
@@ -566,28 +475,6 @@ void vcpu_set_vmcs_eoi_exit(struct acrn_vcpu *vcpu);
 void vcpu_reset_eoi_exit_bitmaps(struct acrn_vcpu *vcpu);
 
 /**
- * @brief set eoi_exit_bitmap bit
- *
- * Set corresponding bit of vector in eoi_exit_bitmap
- *
- * @param[in] vcpu pointer to vcpu data structure
- * @param[in] vector
- *
- * @return None
- */
-void vcpu_set_eoi_exit_bitmap(struct acrn_vcpu *vcpu, uint32_t vector);
-/**
- * @brief clear eoi_exit_bitmap bit
- *
- * Clear corresponding bit of vector in eoi_exit_bitmap
- *
- * @param[in] vcpu pointer to vcpu data structure
- * @param[in] vector
- *
- * @return None
- */
-void vcpu_clear_eoi_exit_bitmap(struct acrn_vcpu *vcpu, uint32_t vector);
-/**
  * @brief set all the vcpu registers
  *
  * Update target vCPU's all registers in run_context.
@@ -636,8 +523,6 @@ static inline bool is_pae(struct acrn_vcpu *vcpu)
 {
 	return (vcpu_get_cr4(vcpu) & CR4_PAE) != 0UL;
 }
-
-struct acrn_vcpu* get_ever_run_vcpu(uint16_t pcpu_id);
 
 /**
  * @brief create a vcpu for the target vm
@@ -702,17 +587,6 @@ void reset_vcpu(struct acrn_vcpu *vcpu);
 void pause_vcpu(struct acrn_vcpu *vcpu, enum vcpu_state new_state);
 
 /**
- * @brief resume the vcpu
- *
- * Change a vCPU state to VCPU_RUNNING, and make a reschedule request for it.
- *
- * @param[inout] vcpu pointer to vcpu data structure
- *
- * @return None
- */
-void resume_vcpu(struct acrn_vcpu *vcpu);
-
-/**
  * @brief set the vcpu to running state, then it will be scheculed.
  *
  * Adds a vCPU into the run queue and make a reschedule request for it. It sets the vCPU state to VCPU_RUNNING.
@@ -747,7 +621,6 @@ int32_t prepare_vcpu(struct acrn_vm *vm, uint16_t pcpu_id);
  * @return The physical destination CPU mask
  */
 uint64_t vcpumask2pcpumask(struct acrn_vm *vm, uint64_t vdmask);
-bool is_lapic_pt_enabled(struct acrn_vcpu *vcpu);
 /**
  * @}
  */

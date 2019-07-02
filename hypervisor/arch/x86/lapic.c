@@ -25,9 +25,6 @@ union lapic_base_msr {
 	} fields;
 };
 
-static struct lapic_regs saved_lapic_regs;
-static union lapic_base_msr saved_lapic_base_msr;
-
 static void clear_lapic_isr(void)
 {
 	uint32_t i;
@@ -90,72 +87,6 @@ void init_lapic(uint16_t pcpu_id)
 
 	/* Ensure there are no ISR bits set. */
 	clear_lapic_isr();
-}
-
-void save_lapic(struct lapic_regs *regs)
-{
-	regs->tpr.v = (uint32_t) msr_read(MSR_IA32_EXT_APIC_TPR);
-	regs->ppr.v = (uint32_t) msr_read(MSR_IA32_EXT_APIC_PPR);
-	regs->tmr[0].v = (uint32_t) msr_read(MSR_IA32_EXT_APIC_TMR0);
-	regs->tmr[1].v = (uint32_t) msr_read(MSR_IA32_EXT_APIC_TMR1);
-	regs->tmr[2].v = (uint32_t) msr_read(MSR_IA32_EXT_APIC_TMR2);
-	regs->tmr[3].v = (uint32_t) msr_read(MSR_IA32_EXT_APIC_TMR3);
-	regs->tmr[4].v = (uint32_t) msr_read(MSR_IA32_EXT_APIC_TMR4);
-	regs->tmr[5].v = (uint32_t) msr_read(MSR_IA32_EXT_APIC_TMR5);
-	regs->tmr[6].v = (uint32_t) msr_read(MSR_IA32_EXT_APIC_TMR6);
-	regs->tmr[7].v = (uint32_t) msr_read(MSR_IA32_EXT_APIC_TMR7);
-	regs->svr.v = (uint32_t) msr_read(MSR_IA32_EXT_APIC_SIVR);
-	regs->lvt[APIC_LVT_TIMER].v =
-		(uint32_t) msr_read(MSR_IA32_EXT_APIC_LVT_TIMER);
-	regs->lvt[APIC_LVT_LINT0].v =
-		(uint32_t) msr_read(MSR_IA32_EXT_APIC_LVT_LINT0);
-	regs->lvt[APIC_LVT_LINT1].v =
-		(uint32_t) msr_read(MSR_IA32_EXT_APIC_LVT_LINT1);
-	regs->lvt[APIC_LVT_ERROR].v =
-		(uint32_t) msr_read(MSR_IA32_EXT_APIC_LVT_ERROR);
-	regs->icr_timer.v = (uint32_t) msr_read(MSR_IA32_EXT_APIC_INIT_COUNT);
-	regs->ccr_timer.v = (uint32_t) msr_read(MSR_IA32_EXT_APIC_CUR_COUNT);
-	regs->dcr_timer.v =
-		(uint32_t) msr_read(MSR_IA32_EXT_APIC_DIV_CONF);
-}
-
-static void restore_lapic(const struct lapic_regs *regs)
-{
-	msr_write(MSR_IA32_EXT_APIC_TPR, (uint64_t) regs->tpr.v);
-	msr_write(MSR_IA32_EXT_APIC_SIVR, (uint64_t) regs->svr.v);
-	msr_write(MSR_IA32_EXT_APIC_LVT_TIMER,
-			(uint64_t) regs->lvt[APIC_LVT_TIMER].v);
-
-	msr_write(MSR_IA32_EXT_APIC_LVT_LINT0,
-			(uint64_t) regs->lvt[APIC_LVT_LINT0].v);
-	msr_write(MSR_IA32_EXT_APIC_LVT_LINT1,
-			(uint64_t) regs->lvt[APIC_LVT_LINT1].v);
-
-	msr_write(MSR_IA32_EXT_APIC_LVT_ERROR,
-			(uint64_t) regs->lvt[APIC_LVT_ERROR].v);
-	msr_write(MSR_IA32_EXT_APIC_INIT_COUNT, (uint64_t) regs->icr_timer.v);
-	msr_write(MSR_IA32_EXT_APIC_DIV_CONF, (uint64_t) regs->dcr_timer.v);
-}
-
-void suspend_lapic(void)
-{
-	uint64_t val;
-
-	saved_lapic_base_msr.value = msr_read(MSR_IA32_APIC_BASE);
-	save_lapic(&saved_lapic_regs);
-
-	/* disable APIC with software flag */
-	val = msr_read(MSR_IA32_EXT_APIC_SIVR);
-	val = (~(uint64_t)LAPIC_SVR_APIC_ENABLE_MASK) & val;
-	msr_write(MSR_IA32_EXT_APIC_SIVR, val);
-}
-
-void resume_lapic(void)
-{
-	msr_write(MSR_IA32_APIC_BASE, saved_lapic_base_msr.value);
-
-	/* ACPI software flag will be restored also */
-	restore_lapic(&saved_lapic_regs);
 }
 
 void send_lapic_eoi(void)

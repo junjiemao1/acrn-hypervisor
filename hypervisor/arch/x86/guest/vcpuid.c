@@ -90,7 +90,7 @@ static inline int32_t set_vcpuid_entry(struct acrn_vm *vm,
 
 	if (vm->vcpuid_entry_nr == MAX_VM_VCPUID_ENTRIES) {
 		pr_err("%s, vcpuid entry over MAX_VM_VCPUID_ENTRIES(%u)\n", __func__, MAX_VM_VCPUID_ENTRIES);
-	        ret = -ENOMEM;
+		ret = -ENOMEM;
 	} else {
 		tmp = &vm->vcpuid_entries[vm->vcpuid_entry_nr];
 		vm->vcpuid_entry_nr++;
@@ -198,40 +198,6 @@ static int32_t set_vcpuid_sgx(struct acrn_vm *vm)
 {
 	int32_t result = 0;
 
-	if (is_vsgx_supported(vm->vm_id)) {
-		struct vcpuid_entry entry;
-		struct epc_map* maps;
-		uint32_t mid;
-		uint64_t size = 0;
-		/* init cpuid.12h.0h */
-		init_vcpuid_entry(CPUID_SGX_LEAF, 0U, CPUID_CHECK_SUBLEAF, &entry);
-		result = set_vcpuid_entry(vm, &entry);
-		/* init cpuid.12h.1h */
-		if (result == 0) {
-			init_vcpuid_entry(CPUID_SGX_LEAF, 1U, CPUID_CHECK_SUBLEAF, &entry);
-			/* MPX not present to guest */
-			entry.ecx &= ~XCR0_BNDREGS;
-			entry.ecx &= ~XCR0_BNDCSR;
-			result = set_vcpuid_entry(vm, &entry);
-		}
-		if (result == 0) {
-			maps = get_epc_mapping(vm->vm_id);
-			/* init cpuid.12h.2h, only build one EPC section for a VM */
-			for (mid = 0U; mid <= MAX_EPC_SECTIONS; mid++) {
-				size += maps[mid].size;
-			}
-			entry.leaf = CPUID_SGX_LEAF;
-			entry.subleaf = CPUID_SGX_EPC_SUBLEAF_BASE;
-			entry.flags = CPUID_CHECK_SUBLEAF;
-			entry.eax = CPUID_SGX_EPC_TYPE_VALID;
-			entry.eax |= (uint32_t)maps[0].gpa & CPUID_SGX_EPC_LOW_MASK;
-			entry.ebx = (uint32_t)(maps[0].gpa >> 32U) &  CPUID_SGX_EPC_HIGH_MASK;
-			entry.ecx = (uint32_t)size & CPUID_SGX_EPC_LOW_MASK;
-			entry.edx = (uint32_t)(size >> 32U) & CPUID_SGX_EPC_HIGH_MASK;
-			result = set_vcpuid_entry(vm, &entry);
-		}
-	}
-
 	return result;
 }
 
@@ -312,9 +278,6 @@ int32_t set_vcpuid_entries(struct acrn_vm *vm)
 					pr_warn("vcpuid: only support subleaf 0 for cpu leaf 07h");
 					entry.eax = 0U;
 				}
-				if (is_vsgx_supported(vm->vm_id)) {
-					entry.ebx |= CPUID_EBX_SGX;
-				}
 				result = set_vcpuid_entry(vm, &entry);
 				break;
 			case 0x12U:
@@ -365,10 +328,8 @@ static void guest_cpuid_01h(struct acrn_vcpu *vcpu, uint32_t *eax, uint32_t *ebx
 	*ebx &= ~APIC_ID_MASK;
 	*ebx |= (apicid <<  APIC_ID_SHIFT);
 
-	if (vm_hide_mtrr(vcpu->vm)) {
-		/* mask mtrr */
-		*edx &= ~CPUID_EDX_MTRR;
-	}
+	/* mask mtrr */
+	*edx &= ~CPUID_EDX_MTRR;
 
 	/* mask Debug Store feature */
 	*ecx &= ~(CPUID_ECX_DTES64 | CPUID_ECX_DS_CPL);
@@ -420,33 +381,28 @@ static void guest_cpuid_0bh(struct acrn_vcpu *vcpu, uint32_t *eax, uint32_t *ebx
 	uint32_t leaf = 0x0bU;
 	uint32_t subleaf = *ecx;
 
-	/* Patching X2APIC */
-	if (is_sos_vm(vcpu->vm)) {
-		cpuid_subleaf(leaf, subleaf, eax, ebx, ecx, edx);
-	} else {
-		*ecx = subleaf & 0xFFU;
-		/* No HT emulation for UOS */
-		switch (subleaf) {
-		case 0U:
+	*ecx = subleaf & 0xFFU;
+	/* No HT emulation for UOS */
+	switch (subleaf) {
+	case 0U:
+		*eax = 0U;
+		*ebx = 1U;
+		*ecx |= (1U << 8U);
+	break;
+	case 1U:
+		if (vcpu->vm->hw.created_vcpus == 1U) {
 			*eax = 0U;
-			*ebx = 1U;
-			*ecx |= (1U << 8U);
-		break;
-		case 1U:
-			if (vcpu->vm->hw.created_vcpus == 1U) {
-				*eax = 0U;
-			} else {
-				*eax = (uint32_t)fls32(vcpu->vm->hw.created_vcpus - 1U) + 1U;
-			}
-			*ebx = vcpu->vm->hw.created_vcpus;
-			*ecx |= (2U << 8U);
-		break;
-		default:
-			*eax = 0U;
-			*ebx = 0U;
-			*ecx |= (0U << 8U);
-		break;
+		} else {
+			*eax = (uint32_t)fls32(vcpu->vm->hw.created_vcpus - 1U) + 1U;
 		}
+		*ebx = vcpu->vm->hw.created_vcpus;
+		*ecx |= (2U << 8U);
+	break;
+	default:
+		*eax = 0U;
+		*ebx = 0U;
+		*ecx |= (0U << 8U);
+	break;
 	}
 	*edx = vlapic_get_apicid(vcpu_vlapic(vcpu));
 }

@@ -44,7 +44,7 @@ static void *ppt_mmu_pml4_addr;
 static uint8_t sanitized_page[PAGE_SIZE] __aligned(PAGE_SIZE);
 
 #define INVEPT_TYPE_SINGLE_CONTEXT      1UL
-#define INVEPT_TYPE_ALL_CONTEXTS        2UL
+#define INVEPT_TYPE_ALL_CONTEXTS	2UL
 #define VMFAIL_INVALID_EPT_VPID				\
 	"       jnc 1f\n"				\
 	"       mov $1, %0\n"    /* CF: error = 1 */	\
@@ -131,11 +131,6 @@ void invept(const struct acrn_vcpu *vcpu)
 		desc.eptp = hva2hpa(vcpu->vm->arch_vm.nworld_eptp) |
 				(3UL << 3U) | 6UL;
 		local_invept(INVEPT_TYPE_SINGLE_CONTEXT, desc);
-		if (vcpu->vm->sworld_control.flag.active != 0UL) {
-			desc.eptp = hva2hpa(vcpu->vm->arch_vm.sworld_eptp)
-				| (3UL << 3U) | 6UL;
-			local_invept(INVEPT_TYPE_SINGLE_CONTEXT, desc);
-		}
 	} else if (pcpu_has_vmx_ept_cap(VMX_EPT_INVEPT_GLOBAL_CONTEXT)) {
 		local_invept(INVEPT_TYPE_ALL_CONTEXTS, desc);
 	} else {

@@ -41,7 +41,6 @@ struct pci_pdev pci_pdev_array[CONFIG_MAX_PCI_DEV_NUM];
 
 static void init_pdev(uint16_t pbdf);
 
-
 static uint32_t pci_pdev_calc_address(union pci_bdf bdf, uint32_t offset)
 {
 	uint32_t addr = (uint32_t)bdf.value;
@@ -357,40 +356,18 @@ static void pci_read_cap(struct pci_pdev *pdev, uint8_t hdr_type)
 		cap = (uint8_t)pci_pdev_read_cfg(pdev->bdf, ptr + PCICAP_ID, 1U);
 
 		/* Ignore all other Capability IDs for now */
-		if ((cap == PCIY_MSI) || (cap == PCIY_MSIX)) {
+		if (cap == PCIY_MSI) {
 			offset = ptr;
-			if (cap == PCIY_MSI) {
-				pdev->msi.capoff = offset;
-				msgctrl = pci_pdev_read_cfg(pdev->bdf, offset + PCIR_MSI_CTRL, 2U);
-				len = ((msgctrl & PCIM_MSICTRL_64BIT) != 0U) ? 14U : 10U;
-				pdev->msi.caplen = len;
+			pdev->msi.capoff = offset;
+			msgctrl = pci_pdev_read_cfg(pdev->bdf, offset + PCIR_MSI_CTRL, 2U);
+			len = ((msgctrl & PCIM_MSICTRL_64BIT) != 0U) ? 14U : 10U;
+			pdev->msi.caplen = len;
 
-				/* Copy MSI capability struct into buffer */
-				for (idx = 0U; idx < len; idx++) {
-					pdev->msi.cap[idx] = (uint8_t)pci_pdev_read_cfg(pdev->bdf, offset + idx, 1U);
-				}
-			} else {
-				pdev->msix.capoff = offset;
-				pdev->msix.caplen = MSIX_CAPLEN;
-				len = pdev->msix.caplen;
-
-				msgctrl = pci_pdev_read_cfg(pdev->bdf, pdev->msix.capoff + PCIR_MSIX_CTRL, 2U);
-
-				/* Read Table Offset and Table BIR */
-				table_info = pci_pdev_read_cfg(pdev->bdf, pdev->msix.capoff + PCIR_MSIX_TABLE, 4U);
-
-				pdev->msix.table_bar = (uint8_t)(table_info & PCIM_MSIX_BIR_MASK);
-
-				pdev->msix.table_offset = table_info & ~PCIM_MSIX_BIR_MASK;
-				pdev->msix.table_count = (msgctrl & PCIM_MSIXCTRL_TABLE_SIZE) + 1U;
-
-				ASSERT(pdev->msix.table_count <= CONFIG_MAX_MSIX_TABLE_NUM);
-
-				/* Copy MSIX capability struct into buffer */
-				for (idx = 0U; idx < len; idx++) {
-					pdev->msix.cap[idx] = (uint8_t)pci_pdev_read_cfg(pdev->bdf, offset + idx, 1U);
-				}
+			/* Copy MSI capability struct into buffer */
+			for (idx = 0U; idx < len; idx++) {
+				pdev->msi.cap[idx] = (uint8_t)pci_pdev_read_cfg(pdev->bdf, offset + idx, 1U);
 			}
+
 		}
 
 		ptr = (uint8_t)pci_pdev_read_cfg(pdev->bdf, ptr + PCICAP_NEXTPTR, 1U);

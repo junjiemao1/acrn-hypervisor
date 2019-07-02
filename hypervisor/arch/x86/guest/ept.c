@@ -20,10 +20,6 @@
 
 void destroy_ept(struct acrn_vm *vm)
 {
-	/* Destroy secure world */
-	if (vm->sworld_control.flag.active != 0UL) {
-		destroy_secure_world(vm, true);
-	}
 
 	if (vm->arch_vm.nworld_eptp != NULL) {
 		(void)memset(vm->arch_vm.nworld_eptp, 0U, PAGE_SIZE);
@@ -64,14 +60,6 @@ uint64_t local_gpa2hpa(struct acrn_vm *vm, uint64_t gpa, uint32_t *size)
 uint64_t gpa2hpa(struct acrn_vm *vm, uint64_t gpa)
 {
 	return local_gpa2hpa(vm, gpa, NULL);
-}
-
-/**
- * @pre: the gpa and hpa are identical mapping in SOS.
- */
-uint64_t sos_vm_hpa2gpa(uint64_t hpa)
-{
-	return hpa;
 }
 
 int32_t ept_misconfig_vmexit_handler(__unused struct acrn_vcpu *vcpu)
@@ -119,26 +107,6 @@ void ept_add_mr(struct acrn_vm *vm, uint64_t *pml4_page,
 	}
 }
 
-void ept_modify_mr(struct acrn_vm *vm, uint64_t *pml4_page,
-		uint64_t gpa, uint64_t size,
-		uint64_t prot_set, uint64_t prot_clr)
-{
-	struct acrn_vcpu *vcpu;
-	uint16_t i;
-	uint64_t local_prot = prot_set;
-
-	dev_dbg(ACRN_DBG_EPT, "%s,vm[%d] gpa 0x%llx size 0x%llx\n", __func__, vm->vm_id, gpa, size);
-
-	if (((local_prot & EPT_MT_MASK) != EPT_UNCACHED) && iommu_snoop_supported(vm->iommu)) {
-		local_prot |= EPT_SNOOP_CTRL;
-	}
-
-	mmu_modify_or_del(pml4_page, gpa, size, local_prot, prot_clr, &(vm->arch_vm.ept_mem_ops), MR_MODIFY);
-
-	foreach_vcpu(i, vm, vcpu) {
-		vcpu_make_request(vcpu, ACRN_REQUEST_EPT_FLUSH);
-	}
-}
 /**
  * @pre [gpa,gpa+size) has been mapped into host physical memory region
  */

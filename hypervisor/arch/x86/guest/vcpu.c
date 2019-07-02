@@ -54,14 +54,6 @@ void vcpu_set_rip(struct acrn_vcpu *vcpu, uint64_t val)
 	bitmap_set_lock(CPU_REG_RIP, &vcpu->reg_updated);
 }
 
-uint64_t vcpu_get_rsp(struct acrn_vcpu *vcpu)
-{
-	struct run_context *ctx =
-		&vcpu->arch.contexts[vcpu->arch.cur_context].run_ctx;
-
-	return ctx->guest_cpu_regs.regs.rsp;
-}
-
 void vcpu_set_rsp(struct acrn_vcpu *vcpu, uint64_t val)
 {
 	struct run_context *ctx =
@@ -138,36 +130,6 @@ void vcpu_set_vmcs_eoi_exit(struct acrn_vcpu *vcpu)
 {
 	pr_dbg("%s", __func__);
 
-	if (is_apicv_advanced_feature_supported()) {
-		exec_vmwrite64(VMX_EOI_EXIT0_FULL, vcpu->arch.eoi_exit_bitmap[0]);
-		exec_vmwrite64(VMX_EOI_EXIT1_FULL, vcpu->arch.eoi_exit_bitmap[1]);
-		exec_vmwrite64(VMX_EOI_EXIT2_FULL, vcpu->arch.eoi_exit_bitmap[2]);
-		exec_vmwrite64(VMX_EOI_EXIT3_FULL, vcpu->arch.eoi_exit_bitmap[3]);
-	}
-}
-
-/*
- * Set the eoi_exit_bitmap bit for specific vector
- * @pre vcpu != NULL && vector <= 255U
- */
-void vcpu_set_eoi_exit_bitmap(struct acrn_vcpu *vcpu, uint32_t vector)
-{
-	pr_dbg("%s", __func__);
-
-	if (!bitmap_test_and_set_nolock((uint16_t)(vector & 0x3fU),
-			&(vcpu->arch.eoi_exit_bitmap[(vector & 0xffU) >> 6U]))) {
-		vcpu_make_request(vcpu, ACRN_REQUEST_EOI_EXIT_BITMAP_UPDATE);
-	}
-}
-
-void vcpu_clear_eoi_exit_bitmap(struct acrn_vcpu *vcpu, uint32_t vector)
-{
-	pr_dbg("%s", __func__);
-
-	if (bitmap_test_and_clear_nolock((uint16_t)(vector & 0x3fU),
-			&(vcpu->arch.eoi_exit_bitmap[(vector & 0xffU) >> 6U]))) {
-		vcpu_make_request(vcpu, ACRN_REQUEST_EOI_EXIT_BITMAP_UPDATE);
-	}
 }
 
 /*
@@ -179,11 +141,6 @@ void vcpu_reset_eoi_exit_bitmaps(struct acrn_vcpu *vcpu)
 
 	(void)memset((void *)(vcpu->arch.eoi_exit_bitmap), 0U, sizeof(vcpu->arch.eoi_exit_bitmap));
 	vcpu_make_request(vcpu, ACRN_REQUEST_EOI_EXIT_BITMAP_UPDATE);
-}
-
-struct acrn_vcpu *get_ever_run_vcpu(uint16_t pcpu_id)
-{
-	return per_cpu(ever_run_vcpu, pcpu_id);
 }
 
 static void set_vcpu_mode(struct acrn_vcpu *vcpu, uint32_t cs_attr, uint64_t ia32_efer,
@@ -394,10 +351,6 @@ int32_t create_vcpu(uint16_t pcpu_id, struct acrn_vm *vm, struct acrn_vcpu **rtn
 		/* Create per vcpu vlapic */
 		vlapic_create(vcpu);
 
-		if (!vm_hide_mtrr(vm)) {
-			init_vmtrr(vcpu);
-		}
-
 		/* Populate the return handle */
 		*rtn_vcpu_handle = vcpu;
 
@@ -603,11 +556,7 @@ void pause_vcpu(struct acrn_vcpu *vcpu, enum vcpu_state new_state)
 	if (atomic_load32(&vcpu->running) == 1U) {
 		remove_from_cpu_runqueue(&vcpu->sched_obj, vcpu->pcpu_id);
 
-		if (is_lapic_pt_enabled(vcpu)) {
-			make_reschedule_request(vcpu->pcpu_id, DEL_MODE_INIT);
-		} else {
-			make_reschedule_request(vcpu->pcpu_id, DEL_MODE_IPI);
-		}
+		make_reschedule_request(vcpu->pcpu_id, DEL_MODE_INIT);
 
 		release_schedule_lock(vcpu->pcpu_id);
 
@@ -620,20 +569,6 @@ void pause_vcpu(struct acrn_vcpu *vcpu, enum vcpu_state new_state)
 		remove_from_cpu_runqueue(&vcpu->sched_obj, vcpu->pcpu_id);
 		release_schedule_lock(vcpu->pcpu_id);
 	}
-}
-
-void resume_vcpu(struct acrn_vcpu *vcpu)
-{
-	pr_dbg("vcpu%hu resumed", vcpu->vcpu_id);
-
-	get_schedule_lock(vcpu->pcpu_id);
-	vcpu->state = vcpu->prev_state;
-
-	if (vcpu->state == VCPU_RUNNING) {
-		add_to_cpu_runqueue(&vcpu->sched_obj, vcpu->pcpu_id);
-		make_reschedule_request(vcpu->pcpu_id, DEL_MODE_IPI);
-	}
-	release_schedule_lock(vcpu->pcpu_id);
 }
 
 static void context_switch_out(struct sched_object *prev)
@@ -719,8 +654,6 @@ int32_t prepare_vcpu(struct acrn_vm *vm, uint16_t pcpu_id)
 		}
 
 		INIT_LIST_HEAD(&vcpu->sched_obj.run_list);
-		snprintf(thread_name, 16U, "vm%hu:vcpu%hu", vm->vm_id, vcpu->vcpu_id);
-		(void)strncpy_s(vcpu->sched_obj.name, 16U, thread_name, 16U);
 		vcpu->sched_obj.thread = vcpu_thread;
 		vcpu->sched_obj.host_sp = build_stack_frame(vcpu);
 		vcpu->sched_obj.prepare_switch_out = context_switch_out;
@@ -744,18 +677,4 @@ uint64_t vcpumask2pcpumask(struct acrn_vm *vm, uint64_t vdmask)
 	}
 
 	return dmask;
-}
-
-/*
- * @brief Check if vCPU uses LAPIC in x2APIC mode and the VM, vCPU belongs to, is configured for
- * LAPIC Pass-through
- *
- * @pre vcpu != NULL
- *
- *  @return true, if vCPU LAPIC is in x2APIC mode and VM, vCPU belongs to, is configured for
- *  				LAPIC Pass-through
- */
-bool is_lapic_pt_enabled(struct acrn_vcpu *vcpu)
-{
-	return ((is_x2apic_enabled(vcpu_vlapic(vcpu))) && (is_lapic_pt_configured(vcpu->vm)));
 }

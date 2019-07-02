@@ -44,8 +44,6 @@ ARCH_LDFLAGS :=
 .PHONY: default
 default: all
 
-include $(BASEDIR)/../scripts/deps.mk
-
 include scripts/kconfig/kconfig.mk
 
 #initialize scenarios name
@@ -59,7 +57,6 @@ else ifeq ($(CONFIG_HYBRID),y)
 SCENARIO_NAME := hybrid
 endif
 
-LD_IN_TOOL = scripts/genld.sh
 BASH = $(shell which bash)
 
 ARFLAGS += crs
@@ -71,13 +68,11 @@ CFLAGS += -fsigned-char
 CFLAGS += -m64 -mno-mmx -mno-sse -mno-sse2 -mno-80387 -mno-fp-ret-in-387
 CFLAGS += -mno-red-zone
 CFLAGS += -nostdinc -nostdlib -fno-common
-CFLAGS += -Werror
 ifeq (y, $(CONFIG_RELOC))
 CFLAGS += -fpie
 else
 CFLAGS += -static
 endif
-
 
 ifdef STACK_PROTECTOR
 ifeq (true, $(shell [ $(GCC_MAJOR) -gt 4 ] && echo true))
@@ -113,8 +108,7 @@ ARCH_ASFLAGS += -gdwarf-2 -DASSEMBLER=1
 ARCH_ARFLAGS +=
 ARCH_LDFLAGS +=
 
-ARCH_LDSCRIPT = $(HV_OBJDIR)/link_ram.ld
-ARCH_LDSCRIPT_IN = bsp/ld/link_ram.ld.in
+ARCH_LDSCRIPT = link_ram.ld
 
 INCLUDE_PATH += include
 INCLUDE_PATH += include/lib
@@ -147,12 +141,6 @@ export LIB_DEBUG LIB_RELEASE
 
 # library componment
 LIB_C_SRCS += lib/string.c
-LIB_C_SRCS += lib/crypto/crypto_api.c
-LIB_C_SRCS += lib/crypto/mbedtls/hkdf.c
-LIB_C_SRCS += lib/crypto/mbedtls/sha256.c
-LIB_C_SRCS += lib/crypto/mbedtls/md.c
-LIB_C_SRCS += lib/crypto/mbedtls/md_wrap.c
-LIB_C_SRCS += lib/sprintf.c
 LIB_C_SRCS += arch/x86/lib/memory.c
 ifdef STACK_PROTECTOR
 LIB_C_SRCS += lib/stack_protector.c
@@ -193,14 +181,9 @@ HW_C_SRCS += arch/x86/gdt.c
 HW_C_SRCS += arch/x86/irq.c
 HW_C_SRCS += arch/x86/timer.c
 HW_C_SRCS += arch/x86/vmx.c
-HW_C_SRCS += arch/x86/cpu_state_tbl.c
-HW_C_SRCS += arch/x86/pm.c
-HW_S_SRCS += arch/x86/wakeup.S
 HW_C_SRCS += arch/x86/trampoline.c
 HW_S_SRCS += arch/x86/sched.S
 HW_C_SRCS += arch/x86/cat.c
-HW_C_SRCS += arch/x86/sgx.c
-HW_C_SRCS += common/softirq.c
 HW_C_SRCS += common/schedule.c
 HW_C_SRCS += hw/pci.c
 HW_C_SRCS += arch/x86/configs/vm_config.c
@@ -211,22 +194,17 @@ HW_C_SRCS += scenarios/$(SCENARIO_NAME)/pt_dev.c
 endif
 HW_C_SRCS += boot/acpi_base.c
 HW_C_SRCS += boot/dmar_info.c
-HW_C_SRCS += boot/cmdline.c
 # ACPI parsing component
 # This part should be isolated from FuSa Cert
 ifeq ($(CONFIG_ACPI_PARSE_ENABLED),y)
-HW_C_SRCS += acpi_parser/dmar_parse.c
-HW_C_SRCS += acpi_parser/acpi_ext.c
 endif
 HW_C_SRCS += boot/guest/vboot_wrapper.c
-HW_C_SRCS += boot/guest/deprivilege_boot.c
 HW_C_SRCS += boot/guest/direct_boot.c
 
 # virtual platform base component
 VP_BASE_C_SRCS += arch/x86/guest/vcpuid.c
 VP_BASE_C_SRCS += arch/x86/guest/vcpu.c
 VP_BASE_C_SRCS += arch/x86/guest/vm.c
-VP_BASE_C_SRCS += arch/x86/guest/vmtrr.c
 VP_BASE_C_SRCS += arch/x86/guest/guest_memory.c
 VP_BASE_C_SRCS += arch/x86/guest/vmsr.c
 VP_BASE_S_SRCS += arch/x86/guest/vmx_asm.S
@@ -235,7 +213,6 @@ VP_BASE_C_SRCS += arch/x86/guest/virq.c
 VP_BASE_C_SRCS += arch/x86/guest/virtual_cr.c
 VP_BASE_C_SRCS += arch/x86/guest/vmexit.c
 VP_BASE_C_SRCS += arch/x86/guest/ept.c
-VP_BASE_C_SRCS += arch/x86/guest/ucode.c
 VP_BASE_C_SRCS += boot/guest/vboot_info.c
 VP_BASE_C_SRCS += common/hv_main.c
 VP_BASE_C_SRCS += common/vm_load.c
@@ -255,23 +232,14 @@ VP_DM_C_SRCS += dm/vpci/pci_pt.c
 VP_DM_C_SRCS += dm/vpci/vmsi.c
 VP_DM_C_SRCS += dm/vpci/vmsix.c
 VP_DM_C_SRCS += arch/x86/guest/vlapic.c
-VP_DM_C_SRCS += arch/x86/guest/pm.c
 VP_DM_C_SRCS += arch/x86/guest/assign.c
 VP_DM_C_SRCS += arch/x86/guest/vmx_io.c
-VP_DM_C_SRCS += arch/x86/guest/instr_emul.c
 VP_DM_C_SRCS += arch/x86/guest/vm_reset.c
 VP_DM_C_SRCS += common/ptdev.c
 
 # virtual platform trusty
-VP_TRUSTY_C_SRCS += arch/x86/guest/trusty.c
-VP_TRUSTY_C_SRCS += common/trusty_hypercall.c
-VP_TRUSTY_C_SRCS += arch/x86/seed/seed.c
-VP_TRUSTY_C_SRCS += arch/x86/seed/seed_abl.c
-VP_TRUSTY_C_SRCS += arch/x86/seed/seed_sbl.c
 
 # virtual platform hypercall
-VP_HCALL_C_SRCS += arch/x86/guest/vmcall.c
-VP_HCALL_C_SRCS += common/hypercall.c
 
 # system initialization
 SYS_INIT_C_SRCS += arch/x86/init.c
@@ -325,7 +293,7 @@ VERSION := $(HV_OBJDIR)/include/version.h
 TEMPLATE_ACPI_INFO_HEADER := arch/x86/configs/platform_acpi_info.h
 BOARDTEMPLATE_ACPI_INFO_HEADER := arch/x86/configs/$(CONFIG_BOARD)/platform_acpi_info.h
 SOURCE_ACPI_INFO_HEADER := arch/x86/configs/$(CONFIG_BOARD)/$(CONFIG_BOARD)_acpi_info.h
-TARGET_ACPI_INFO_HEADER := $(HV_OBJDIR)/include/platform_acpi_info.h
+TARGET_ACPI_INFO_HEADER := include/platform_acpi_info.h
 
 $(TARGET_ACPI_INFO_HEADER): $(HV_OBJDIR)/$(HV_CONFIG)
 ifeq (,$(wildcard $(SOURCE_ACPI_INFO_HEADER)))
@@ -356,7 +324,7 @@ else
 endif
 
 .PHONY: all
-all: pre_build $(MOD_DEPS) $(HV_OBJDIR)/$(HV_FILE).32.out $(HV_OBJDIR)/$(HV_FILE).bin
+all:  $(MOD_DEPS) $(HV_OBJDIR)/$(HV_FILE).32.out $(HV_OBJDIR)/$(HV_FILE).bin
 
 ifeq ($(FIRMWARE),sbl)
 install: $(MOD_DEPS) $(HV_OBJDIR)/$(HV_FILE).32.out
@@ -416,7 +384,6 @@ $(HV_OBJDIR)/$(HV_FILE).bin: $(HV_OBJDIR)/$(HV_FILE).out
 	$(OBJCOPY) -O binary $< $(HV_OBJDIR)/$(HV_FILE).bin
 
 $(HV_OBJDIR)/$(HV_FILE).out: $(MODULES)
-	${BASH} ${LD_IN_TOOL} $(ARCH_LDSCRIPT_IN) $(ARCH_LDSCRIPT) ${HV_OBJDIR}/.config
 	$(CC) -Wl,-Map=$(HV_OBJDIR)/$(HV_FILE).map -o $@ $(LDFLAGS) $(ARCH_LDFLAGS) -T$(ARCH_LDSCRIPT) \
 		-Wl,--start-group $^ -Wl,--end-group
 
@@ -436,7 +403,7 @@ distclean:
 
 PHONY: (VERSION)
 $(VERSION):
-	touch $(VERSION)
+	@mkdir -p $(dir $(VERSION)) && touch $(VERSION)
 	@COMMIT=`git rev-parse --verify --short HEAD 2>/dev/null`;\
 	DIRTY=`git diff-index --name-only HEAD`;\
 	if [ -n "$$DIRTY" ];then PATCH="$$COMMIT-dirty";else PATCH="$$COMMIT";fi;\

@@ -44,22 +44,6 @@ void release_schedule_lock(uint16_t pcpu_id)
 	spinlock_release(&ctx->scheduler_lock);
 }
 
-uint16_t allocate_pcpu(void)
-{
-	uint16_t i;
-	uint16_t ret = INVALID_CPU_ID;
-	uint16_t pcpu_nums = get_pcpu_nums();
-
-	for (i = 0U; i < pcpu_nums; i++) {
-		if (bitmap_test_and_set_lock(i, &pcpu_used_bitmap) == 0) {
-			ret = i;
-			break;
-		}
-	}
-
-	return ret;
-}
-
 void set_pcpu_used(uint16_t pcpu_id)
 {
 	bitmap_set_lock(pcpu_id, &pcpu_used_bitmap);
@@ -219,8 +203,6 @@ void switch_to_idle(run_thread_t idle_thread)
 	struct sched_object *idle = &per_cpu(idle, pcpu_id);
 	char idle_name[16];
 
-	snprintf(idle_name, 16U, "idle%hu", pcpu_id);
-	(void)strncpy_s(idle->name, 16U, idle_name, 16U);
 	idle->thread = idle_thread;
 	idle->prepare_switch_out = NULL;
 	idle->prepare_switch_in = NULL;

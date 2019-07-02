@@ -32,7 +32,6 @@
 
 #include <pci.h>
 
-
 struct msix_table_entry {
 	uint64_t	addr;
 	uint32_t	data;
@@ -48,9 +47,7 @@ struct pci_msi {
 /* MSI-X capability structure */
 struct pci_msix {
 	struct msix_table_entry table_entries[CONFIG_MAX_MSIX_TABLE_NUM];
-	uint64_t  mmio_gpa;
 	uint64_t  mmio_hpa;
-	uint64_t  mmio_size;
 	uint32_t  capoff;
 	uint32_t  caplen;
 	uint32_t  table_bar;
@@ -102,7 +99,5 @@ struct acrn_vpci {
 
 void vpci_init(struct acrn_vm *vm);
 void vpci_cleanup(const struct acrn_vm *vm);
-void vpci_set_ptdev_intr_info(const struct acrn_vm *target_vm, uint16_t vbdf, uint16_t pbdf);
-void vpci_reset_ptdev_intr_info(const struct acrn_vm *target_vm, uint16_t vbdf, uint16_t pbdf);
 
 #endif /* VPCI_H_ */

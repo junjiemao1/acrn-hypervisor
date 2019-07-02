@@ -44,91 +44,77 @@
  */
 
 /* some PCI bus constants */
-#define PCI_BUSMAX            0xFFU
-#define PCI_SLOTMAX           0x1FU
-#define PCI_FUNCMAX           0x7U
-#define PCI_BAR_COUNT         0x6U
-#define PCI_REGMAX            0xFFU
-#define PCI_REGMASK           0xFCU
+#define PCI_BUSMAX	    0xFFU
+#define PCI_SLOTMAX	   0x1FU
+#define PCI_FUNCMAX	   0x7U
+#define PCI_BAR_COUNT	 0x6U
+#define PCI_REGMAX	    0xFFU
+#define PCI_REGMASK	   0xFCU
 
 /* I/O ports */
 #define PCI_CONFIG_ADDR       0xCF8U
 #define PCI_CONFIG_DATA       0xCFCU
 
-#define PCI_CFG_ENABLE        0x80000000U
+#define PCI_CFG_ENABLE	0x80000000U
 
 /* PCI config header registers for all devices */
-#define PCIR_VENDOR           0x00U
-#define PCIR_DEVICE           0x02U
-#define PCIR_COMMAND          0x04U
-#define	PCIM_CMD_PORTEN       0x01U
-#define	PCIM_CMD_MEMEN        0x02U
+#define PCIR_VENDOR	   0x00U
+#define PCIR_DEVICE	   0x02U
+#define PCIR_COMMAND	  0x04U
 #define PCIM_CMD_INTxDIS      0x400U
-#define PCIR_STATUS           0x06U
+#define PCIR_STATUS	   0x06U
 #define PCIM_STATUS_CAPPRESENT    0x0010U
-#define PCIR_REVID            0x08U
-#define PCIR_SUBCLASS         0x0AU
-#define PCIR_CLASS            0x0BU
-#define PCIR_HDRTYPE          0x0EU
-#define PCIM_HDRTYPE          0x7FU
+#define PCIR_REVID	    0x08U
+#define PCIR_SUBCLASS	 0x0AU
+#define PCIR_CLASS	    0x0BU
+#define PCIR_HDRTYPE	  0x0EU
+#define PCIM_HDRTYPE	  0x7FU
 #define PCIM_HDRTYPE_NORMAL   0x00U
 #define PCIM_HDRTYPE_BRIDGE   0x01U
 #define	PCIM_HDRTYPE_CARDBUS  0x02U
-#define PCIM_MFDEV            0x80U
-#define PCIR_BARS             0x10U
-#define PCIM_BAR_SPACE        0x01U
+#define PCIM_MFDEV	    0x80U
+#define PCIR_BARS	     0x10U
+#define PCIM_BAR_SPACE	0x01U
 #define PCIM_BAR_IO_SPACE     0x01U
 #define PCIM_BAR_MEM_TYPE     0x06U
 #define PCIM_BAR_MEM_32       0x00U
 #define PCIM_BAR_MEM_1MB      0x02U
 #define PCIM_BAR_MEM_64       0x04U
-#define PCIM_BAR_MEM_BASE     0xFFFFFFF0U
-#define PCIR_CAP_PTR          0x34U
+#define PCIR_CAP_PTR	  0x34U
 #define PCIR_CAP_PTR_CARDBUS  0x14U
 
-/* config registers for header type 1 (PCI-to-PCI bridge) devices */
-#define PCIR_PRIBUS_1         0x18U
-#define PCIR_SECBUS_1         0x19U
-#define PCIR_SUBBUS_1         0x1AU
+#define PCIR_SECBUS_1	 0x19U
 
 /* Capability Register Offsets */
-#define PCICAP_ID             0x0U
-#define PCICAP_NEXTPTR        0x1U
+#define PCICAP_ID	     0x0U
+#define PCICAP_NEXTPTR	0x1U
 
 /* Capability Identification Numbers */
-#define PCIY_MSI              0x05U
-#define PCIY_MSIX             0x11U
+#define PCIY_MSI	      0x05U
+#define PCIY_MSIX	     0x11U
 
 /* PCI Message Signalled Interrupts (MSI) */
-#define PCIR_MSI_CTRL         0x02U
+#define PCIR_MSI_CTRL	 0x02U
 #define PCIM_MSICTRL_64BIT    0x80U
 #define PCIM_MSICTRL_MSI_ENABLE  0x01U
-#define PCIR_MSI_ADDR         0x4U
+#define PCIR_MSI_ADDR	 0x4U
 #define PCIR_MSI_ADDR_HIGH    0x8U
-#define PCIR_MSI_DATA         0x8U
+#define PCIR_MSI_DATA	 0x8U
 #define PCIR_MSI_DATA_64BIT   0xCU
-#define PCIR_MSI_MASK         0x10U
 #define PCIM_MSICTRL_MMC_MASK 0x000EU
 #define PCIM_MSICTRL_MME_MASK 0x0070U
 
 /* PCI device class */
-#define PCIC_BRIDGE           0x06U
+#define PCIC_BRIDGE	   0x06U
 #define PCIS_BRIDGE_HOST      0x00U
 
 /* MSI-X definitions */
-#define PCIR_MSIX_CTRL        0x2U
-#define PCIR_MSIX_TABLE       0x4U
-#define PCIR_MSIX_PBA         0x8U
+#define PCIR_MSIX_CTRL	0x2U
 
 #define PCIM_MSIXCTRL_MSIX_ENABLE    0x8000U
 #define PCIM_MSIXCTRL_FUNCTION_MASK  0x4000U
-#define PCIM_MSIXCTRL_TABLE_SIZE     0x07FFU
-#define PCIM_MSIX_BIR_MASK    0x7U
-#define PCIM_MSIX_VCTRL_MASK  0x1U
 
-#define MSI_MAX_CAPLEN        14U
-#define MSIX_CAPLEN           12U
-#define MSIX_TABLE_ENTRY_SIZE 16U
+#define MSI_MAX_CAPLEN	14U
 
 union pci_bdf {
 	uint16_t value;
@@ -148,15 +134,15 @@ enum pci_bar_type {
 
 /*
  * Base Address Register for MMIO, pf=prefetchable, type=0 (32-bit), 1 (<=1MB), 2 (64-bit):
- *  31                        4  3  2   1   0
+ *  31			4  3  2   1   0
  *  +----------+--------------+-------------+
- *  |    Base address         |pf| type | 0 |
+ *  |    Base address	 |pf| type | 0 |
  *  +---------------------------------------+
  *
  * Base Address Register for IO (R=reserved):
- *  31                              2   1   0
+ *  31			      2   1   0
  *  +----------+----------------------------+
- *  |    Base address               | R | 1 |
+ *  |    Base address	       | R | 1 |
  *  +---------------------------------------+
  */
 union pci_bar_reg {
@@ -201,7 +187,6 @@ struct pci_msix_cap {
 	uint8_t   table_bar;
 	uint32_t  table_offset;
 	uint32_t  table_count;
-	uint8_t   cap[MSIX_CAPLEN];
 };
 
 struct pci_pdev {
@@ -219,7 +204,6 @@ struct pci_pdev {
 
 extern uint32_t num_pci_pdev;
 extern struct pci_pdev pci_pdev_array[CONFIG_MAX_PCI_DEV_NUM];
-
 
 static inline uint32_t pci_bar_offset(uint32_t idx)
 {
@@ -329,6 +313,5 @@ void pci_pdev_write_cfg(union pci_bdf bdf, uint32_t offset, uint32_t bytes, uint
 void enable_disable_pci_intx(union pci_bdf bdf, bool enable);
 
 void init_pci_pdev_list(void);
-
 
 #endif /* PCI_H_ */

@@ -176,7 +176,7 @@ static void init_host_state(void)
 	gdt_base = sgdt();
 
 	if (((gdt_base >> 47U) & 0x1UL) != 0UL) {
-	        gdt_base |= 0xffff000000000000UL;
+		gdt_base |= 0xffff000000000000UL;
 	}
 
 	/* Set up the guest and host GDTB base fields with current GDTB base */
@@ -294,10 +294,6 @@ static void init_exec_ctrl(struct acrn_vcpu *vcpu)
 	/* enable external interrupt VM Exit */
 	value32 = check_vmx_ctrl(MSR_IA32_VMX_PINBASED_CTLS, VMX_PINBASED_CTLS_IRQ_EXIT);
 
-	if (is_apicv_advanced_feature_supported()) {
-		value32 |= VMX_PINBASED_CTLS_POST_IRQ;
-	}
-
 	exec_vmwrite32(VMX_PIN_VM_EXEC_CONTROLS, value32);
 	pr_dbg("VMX_PIN_VM_EXEC_CONTROLS: 0x%x ", value32);
 
@@ -343,20 +339,15 @@ static void init_exec_ctrl(struct acrn_vcpu *vcpu)
 		value32 &= ~VMX_PROCBASED_CTLS2_VPID;
 	}
 
-	if (is_apicv_advanced_feature_supported()) {
-		value32 |= VMX_PROCBASED_CTLS2_VIRQ;
-		value32 |= VMX_PROCBASED_CTLS2_VAPIC_REGS;
-	} else {
-		/*
-		 * This field exists only on processors that support
-		 * the 1-setting  of the "use TPR shadow"
-		 * VM-execution control.
-		 *
-		 * Set up TPR threshold for virtual interrupt delivery
-		 * - pg 2904 24.6.8
-		 */
-		exec_vmwrite32(VMX_TPR_THRESHOLD, 0U);
-	}
+	/*
+	 * This field exists only on processors that support
+	 * the 1-setting  of the "use TPR shadow"
+	 * VM-execution control.
+	 *
+	 * Set up TPR threshold for virtual interrupt delivery
+	 * - pg 2904 24.6.8
+	 */
+	exec_vmwrite32(VMX_TPR_THRESHOLD, 0U);
 
 	if (pcpu_has_cap(X86_FEATURE_OSXSAVE)) {
 		exec_vmwrite64(VMX_XSS_EXITING_BITMAP_FULL, 0UL);
@@ -375,20 +366,6 @@ static void init_exec_ctrl(struct acrn_vcpu *vcpu)
 	/*APIC-v, config APIC virtualized page address*/
 	value64 = vlapic_apicv_get_apic_page_addr(vcpu_vlapic(vcpu));
 	exec_vmwrite64(VMX_VIRTUAL_APIC_PAGE_ADDR_FULL, value64);
-
-	if (is_apicv_advanced_feature_supported()) {
-		/* Disable all EOI VMEXIT by default and
-		 * clear RVI and SVI.
-		 */
-		exec_vmwrite64(VMX_EOI_EXIT0_FULL, 0UL);
-		exec_vmwrite64(VMX_EOI_EXIT1_FULL, 0UL);
-		exec_vmwrite64(VMX_EOI_EXIT2_FULL, 0UL);
-		exec_vmwrite64(VMX_EOI_EXIT3_FULL, 0UL);
-
-		exec_vmwrite16(VMX_GUEST_INTR_STATUS, 0U);
-		exec_vmwrite16(VMX_POSTED_INTR_VECTOR, VECTOR_POSTED_INTR);
-		exec_vmwrite64(VMX_PIR_DESC_ADDR_FULL, apicv_get_pir_desc_paddr(vcpu));
-	}
 
 	/* Load EPTP execution control
 	 * TODO: introduce API to make this data driven based
@@ -575,49 +552,34 @@ void init_vmcs(struct acrn_vcpu *vcpu)
 void switch_apicv_mode_x2apic(struct acrn_vcpu *vcpu)
 {
 	uint32_t value32;
-	if (is_lapic_pt_configured(vcpu->vm)) {
-		dev_dbg(ACRN_DBG_LAPICPT, "%s: switching to x2apic and passthru", __func__);
-		/*
-		 * Disable external interrupt exiting and irq ack
-		 * Disable posted interrupt processing
-		 * update x2apic msr bitmap for pass-thru
-		 * enable inteception only for ICR
-		 * disable pre-emption for TSC DEADLINE MSR
-		 * Disable Register Virtualization and virtual interrupt delivery
-		 * Disable "use TPR shadow"
-		 */
+	dev_dbg(ACRN_DBG_LAPICPT, "%s: switching to x2apic and passthru", __func__);
+	/*
+	 * Disable external interrupt exiting and irq ack
+	 * Disable posted interrupt processing
+	 * update x2apic msr bitmap for pass-thru
+	 * enable inteception only for ICR
+	 * disable pre-emption for TSC DEADLINE MSR
+	 * Disable Register Virtualization and virtual interrupt delivery
+	 * Disable "use TPR shadow"
+	 */
 
-		value32 = exec_vmread32(VMX_PIN_VM_EXEC_CONTROLS);
-		value32 &= ~VMX_PINBASED_CTLS_IRQ_EXIT;
-		if (is_apicv_advanced_feature_supported()) {
-			value32 &= ~VMX_PINBASED_CTLS_POST_IRQ;
-		}
-		exec_vmwrite32(VMX_PIN_VM_EXEC_CONTROLS, value32);
+	value32 = exec_vmread32(VMX_PIN_VM_EXEC_CONTROLS);
+	value32 &= ~VMX_PINBASED_CTLS_IRQ_EXIT;
+	exec_vmwrite32(VMX_PIN_VM_EXEC_CONTROLS, value32);
 
-		value32 = exec_vmread32(VMX_EXIT_CONTROLS);
-		value32 &= ~VMX_EXIT_CTLS_ACK_IRQ;
-		exec_vmwrite32(VMX_EXIT_CONTROLS, value32);
+	value32 = exec_vmread32(VMX_EXIT_CONTROLS);
+	value32 &= ~VMX_EXIT_CTLS_ACK_IRQ;
+	exec_vmwrite32(VMX_EXIT_CONTROLS, value32);
 
-		value32 = exec_vmread32(VMX_PROC_VM_EXEC_CONTROLS);
-		value32 &= ~VMX_PROCBASED_CTLS_TPR_SHADOW;
-		exec_vmwrite32(VMX_PROC_VM_EXEC_CONTROLS, value32);
+	value32 = exec_vmread32(VMX_PROC_VM_EXEC_CONTROLS);
+	value32 &= ~VMX_PROCBASED_CTLS_TPR_SHADOW;
+	exec_vmwrite32(VMX_PROC_VM_EXEC_CONTROLS, value32);
 
-		exec_vmwrite32(VMX_TPR_THRESHOLD, 0U);
+	exec_vmwrite32(VMX_TPR_THRESHOLD, 0U);
 
-		value32 = exec_vmread32(VMX_PROC_VM_EXEC_CONTROLS2);
-		value32 &= ~VMX_PROCBASED_CTLS2_VAPIC;
-		if (is_apicv_advanced_feature_supported()) {
-			value32 &= ~VMX_PROCBASED_CTLS2_VIRQ;
-			value32 &= ~VMX_PROCBASED_CTLS2_VAPIC_REGS;
-		}
-		exec_vmwrite32(VMX_PROC_VM_EXEC_CONTROLS2, value32);
+	value32 = exec_vmread32(VMX_PROC_VM_EXEC_CONTROLS2);
+	value32 &= ~VMX_PROCBASED_CTLS2_VAPIC;
+	exec_vmwrite32(VMX_PROC_VM_EXEC_CONTROLS2, value32);
 
-		update_msr_bitmap_x2apic_passthru(vcpu);
-	} else {
-		value32 = exec_vmread32(VMX_PROC_VM_EXEC_CONTROLS2);
-		value32 &= ~VMX_PROCBASED_CTLS2_VAPIC;
-		value32 |= VMX_PROCBASED_CTLS2_VX2APIC;
-		exec_vmwrite32(VMX_PROC_VM_EXEC_CONTROLS2, value32);
-		update_msr_bitmap_x2apic_apicv(vcpu);
-	}
+	update_msr_bitmap_x2apic_passthru(vcpu);
 }

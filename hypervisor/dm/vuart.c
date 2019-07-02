@@ -76,23 +76,6 @@ static inline uint32_t fifo_numchars(const struct vuart_fifo *fifo)
 	return fifo->num;
 }
 
-void vuart_putchar(struct acrn_vuart *vu, char ch)
-{
-	vuart_lock(vu);
-	fifo_putchar(&vu->rxfifo, ch);
-	vuart_unlock(vu);
-}
-
-char vuart_getchar(struct acrn_vuart *vu)
-{
-	char c;
-
-	vuart_lock(vu);
-	c = fifo_getchar(&vu->txfifo);
-	vuart_unlock(vu);
-	return c;
-}
-
 static inline void vuart_fifo_init(struct acrn_vuart *vu)
 {
 	vu->txfifo.buf = vu->vuart_tx_buf;
@@ -144,44 +127,12 @@ struct acrn_vuart *find_vuart_by_port(struct acrn_vm *vm, uint16_t offset)
 	return ret_vu;
 }
 
-/*
- * Toggle the COM port's intr pin depending on whether or not we have an
- * interrupt condition to report to the processor.
- */
-void vuart_toggle_intr(const struct acrn_vuart *vu)
-{
-	uint8_t intr_reason;
-	union ioapic_rte rte;
-	uint32_t operation;
-
-	intr_reason = vuart_intr_reason(vu);
-	vioapic_get_rte(vu->vm, vu->irq, &rte);
-
-	/* TODO:
-	 * Here should assert vuart irq according to CONFIG_COM_IRQ polarity.
-	 * The best way is to get the polarity info from ACIP table.
-	 * Here we just get the info from vioapic configuration.
-	 * based on this, we can still have irq storm during guest
-	 * modify the vioapic setting, as it's only for debug uart,
-	 * we want to make it as an known issue.
-	 */
-	if (rte.bits.intr_polarity == IOAPIC_RTE_INTPOL_ALO) {
-		operation = (intr_reason != IIR_NOPEND) ? GSI_SET_LOW : GSI_SET_HIGH;
-	} else {
-		operation = (intr_reason != IIR_NOPEND) ? GSI_SET_HIGH : GSI_SET_LOW;
-	}
-
-	vpic_set_irqline(vm_pic(vu->vm), vu->irq, operation);
-	vioapic_set_irqline_lock(vu->vm, vu->irq, operation);
-}
-
 static void send_to_target(struct acrn_vuart *vu, uint8_t value_u8)
 {
 	vuart_lock(vu);
 	if (vu->active) {
 		fifo_putchar(&vu->rxfifo, (char)value_u8);
 		vu->thre_int_pending = true;
-		vuart_toggle_intr(vu);
 	}
 	vuart_unlock(vu);
 }
@@ -330,7 +281,6 @@ static void write_reg(struct acrn_vuart *vu, uint16_t reg, uint8_t value_u8)
 			break;
 		}
 	}
-	vuart_toggle_intr(vu);
 	vuart_unlock(vu);
 }
 
@@ -433,7 +383,6 @@ static bool vuart_read(struct acrn_vm *vm, struct acrn_vcpu *vcpu, uint16_t offs
 				break;
 			}
 		}
-		vuart_toggle_intr(vu);
 		pio_req->value = (uint32_t)reg;
 		vuart_unlock(vu);
 	}
@@ -486,7 +435,6 @@ static void vuart_setup(struct acrn_vm *vm,
 	vuart_lock_init(vu);
 	vu->thre_int_pending = true;
 	vu->ier = 0U;
-	vuart_toggle_intr(vu);
 	vu->target_vu = NULL;
 	if (vu_config->type == VUART_LEGACY_PIO) {
 		vu->port_base = vu_config->addr.port_base;
@@ -543,19 +491,6 @@ void vuart_deinit_connect(struct acrn_vuart *vu)
 
 	t_vu->target_vu = NULL;
 	vu->target_vu = NULL;
-}
-
-bool is_vuart_intx(struct acrn_vm *vm, uint32_t intx_pin)
-{
-	uint8_t i;
-	bool ret = false;
-
-	for (i = 0U; i < MAX_VUART_NUM_PER_VM; i++) {
-		if ((vm->vuart[i].active) && (vm->vuart[i].irq == intx_pin)) {
-			ret = true;
-		}
-	}
-	return ret;
 }
 
 void vuart_init(struct acrn_vm *vm, struct vuart_config *vu_config)

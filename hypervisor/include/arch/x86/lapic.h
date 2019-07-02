@@ -10,43 +10,27 @@
 #include <types.h>
 #include <apicreg.h>
 
-/* intr_lapic_icr_delivery_mode */
-#define INTR_LAPIC_ICR_FIXED    0x0U
-#define INTR_LAPIC_ICR_LP          0x1U
-#define INTR_LAPIC_ICR_SMI        0x2U
-#define INTR_LAPIC_ICR_NMI       0x4U
 #define INTR_LAPIC_ICR_INIT       0x5U
 #define INTR_LAPIC_ICR_STARTUP  0x6U
 
 /* intr_lapic_icr_dest_mode */
 #define INTR_LAPIC_ICR_PHYSICAL 0x0U
-#define INTR_LAPIC_ICR_LOGICAL  0x1U
 
 /* intr_lapic_icr_level */
 #define INTR_LAPIC_ICR_DEASSERT  0x0U
 #define INTR_LAPIC_ICR_ASSERT       0x1U
 
-/* intr_lapic_icr_trigger */
-#define INTR_LAPIC_ICR_EDGE         0x0U
-#define INTR_LAPIC_ICR_LEVEL        0x1U
+#define INTR_LAPIC_ICR_LEVEL	0x1U
 
 /* intr_lapic_icr_shorthand */
 #define INTR_LAPIC_ICR_USE_DEST_ARRAY    0x0U
-#define INTR_LAPIC_ICR_SELF                          0x1U
-#define INTR_LAPIC_ICR_ALL_INC_SELF         0x2U
-#define INTR_LAPIC_ICR_ALL_EX_SELF            0x3U
+#define INTR_LAPIC_ICR_ALL_EX_SELF	    0x3U
 
 /* LAPIC register bit and bitmask definitions */
-#define LAPIC_SVR_VECTOR                        0x000000FFU
-#define LAPIC_SVR_APIC_ENABLE_MASK                   0x00000100U
+#define LAPIC_SVR_VECTOR			0x000000FFU
+#define LAPIC_SVR_APIC_ENABLE_MASK		   0x00000100U
 
-#define LAPIC_LVT_MASK                          0x00010000U
-#define LAPIC_DELIVERY_MODE_EXTINT_MASK         0x00000700U
-
-/* LAPIC Timer bit and bitmask definitions */
-#define LAPIC_TMR_ONESHOT                       ((uint32_t) 0x0U << 17U)
-#define LAPIC_TMR_PERIODIC                      ((uint32_t) 0x1U << 17U)
-#define LAPIC_TMR_TSC_DEADLINE                  ((uint32_t) 0x2U << 17U)
+#define LAPIC_LVT_MASK			  0x00010000U
 
 enum intr_cpu_startup_shorthand {
 	INTR_CPU_STARTUP_USE_DEST,
@@ -84,34 +68,12 @@ union apic_icr {
  */
 
 /**
- * @brief Save context of LAPIC
- *
- * @param[inout]	regs	Pointer to struct lapic_regs to hold the
- *				context of current LAPIC
- */
-void save_lapic(struct lapic_regs *regs);
-
-/**
  * @brief Enable LAPIC in x2APIC mode
  *
  * Enable LAPIC in x2APIC mode via MSR writes.
  *
  */
 void early_init_lapic(void);
-
-/**
- * @brief Suspend LAPIC
- *
- * Suspend LAPIC by getting the APIC base addr and saving the registers.
- */
-void suspend_lapic(void);
-
-/**
- * @brief Resume LAPIC
- *
- * Resume LAPIC by setting the APIC base addr and restoring the registers.
- */
-void resume_lapic(void);
 
 /**
  * @brief Get the LAPIC ID

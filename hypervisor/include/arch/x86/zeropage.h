@@ -9,9 +9,7 @@
 #include <e820.h>
 
 struct zero_page {
-	uint8_t pad1[0x1e8];	/* 0x000 */
 	uint8_t e820_nentries;	/* 0x1e8 */
-	uint8_t pad2[0x8];	/* 0x1e9 */
 
 	struct {
 		uint8_t setup_sects;	/* 0x1f1 */
@@ -33,9 +31,7 @@ struct zero_page {
 		uint8_t hdr_pad7[8];    /* 0x260 */
 	} __packed hdr;
 
-	uint8_t pad3[0x68];	/* 0x268 */
 	struct e820_entry entries[0x80];	/* 0x2d0 */
-	uint8_t pad4[0x330];	/* 0xcd0 */
 } __packed;
 
 #endif

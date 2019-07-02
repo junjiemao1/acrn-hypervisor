@@ -18,17 +18,11 @@
 #define PAGE_USER		(1UL << 2U)
 #define PAGE_PWT		(1UL << 3U)
 #define PAGE_PCD		(1UL << 4U)
-#define PAGE_ACCESSED		(1UL << 5U)
-#define PAGE_DIRTY		(1UL << 6U)
 #define PAGE_PSE		(1UL << 7U)
-#define PAGE_GLOBAL		(1UL << 8U)
-#define PAGE_PAT_LARGE		(1UL << 12U)
 #define PAGE_NX			(1UL << 63U)
 
 #define PAGE_CACHE_MASK		(PAGE_PCD | PAGE_PWT)
 #define PAGE_CACHE_WB		0UL
-#define PAGE_CACHE_WT		PAGE_PWT
-#define PAGE_CACHE_UC_MINUS	PAGE_PCD
 #define PAGE_CACHE_UC		(PAGE_PCD | PAGE_PWT)
 
 /**
@@ -83,21 +77,6 @@
 #define EPT_UNCACHED		(0UL << EPT_MT_SHIFT)
 
 /**
- * @brief EPT memory type is write combining.
- */
-#define EPT_WC			(1UL << EPT_MT_SHIFT)
-
-/**
- * @brief EPT memory type is write through.
- */
-#define EPT_WT			(4UL << EPT_MT_SHIFT)
-
-/**
- * @brief EPT memory type is write protected.
- */
-#define EPT_WP			(5UL << EPT_MT_SHIFT)
-
-/**
  * @brief EPT memory type is write back.
  */
 #define EPT_WB			(6UL << EPT_MT_SHIFT)
@@ -110,7 +89,6 @@
 #define EPT_MT_MASK		(7UL << EPT_MT_SHIFT)
 /* VTD: Second-Level Paging Entries: Snoop Control */
 #define EPT_SNOOP_CTRL		(1UL << 11U)
-#define EPT_VE			(1UL << 63U)
 
 #define PML4E_SHIFT		39U
 #define PTRS_PER_PML4E		512UL
@@ -130,7 +108,6 @@
 #define PTE_SHIFT		12U
 #define PTRS_PER_PTE		512UL
 #define PTE_SIZE		(1UL << PTE_SHIFT)
-#define PTE_MASK		(~(PTE_SIZE - 1UL))
 
 /* TODO: PAGE_MASK & PHYSICAL_MASK */
 #define PML4E_PFN_MASK		0x0000FFFFFFFFF000UL

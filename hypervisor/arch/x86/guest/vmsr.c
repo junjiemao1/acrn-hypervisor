@@ -344,16 +344,6 @@ int32_t rdmsr_vmexit_handler(struct acrn_vcpu *vcpu)
 
 	/* Do the required processing for each msr case */
 	switch (msr) {
-	case MSR_IA32_TSC_DEADLINE:
-	{
-		v = vlapic_get_tsc_deadline_msr(vcpu_vlapic(vcpu));
-		break;
-	}
-	case MSR_IA32_TSC_ADJUST:
-	{
-		v = vcpu_get_guest_msr(vcpu, MSR_IA32_TSC_ADJUST);
-		break;
-	}
 	case MSR_IA32_MTRR_CAP:
 	case MSR_IA32_MTRR_DEF_TYPE:
 	case MSR_IA32_MTRR_FIX64K_00000:
@@ -368,21 +358,7 @@ int32_t rdmsr_vmexit_handler(struct acrn_vcpu *vcpu)
 	case MSR_IA32_MTRR_FIX4K_F0000:
 	case MSR_IA32_MTRR_FIX4K_F8000:
 	{
-		if (!vm_hide_mtrr(vcpu->vm)) {
-			v = read_vmtrr(vcpu, msr);
-		} else {
-			err = -EACCES;
-		}
-		break;
-	}
-	case MSR_IA32_BIOS_SIGN_ID:
-	{
-		v = get_microcode_version();
-		break;
-	}
-	case MSR_IA32_PERF_CTL:
-	{
-		v = msr_read(msr);
+		err = -EACCES;
 		break;
 	}
 	case MSR_IA32_PAT:
@@ -399,9 +375,6 @@ int32_t rdmsr_vmexit_handler(struct acrn_vcpu *vcpu)
 	case MSR_IA32_FEATURE_CONTROL:
 	{
 		v = MSR_IA32_FEATURE_CONTROL_LOCK;
-		if (is_vsgx_supported(vcpu->vm->vm_id)) {
-			v |= MSR_IA32_FEATURE_CONTROL_SGX_GE;
-		}
 		break;
 	}
 	case MSR_IA32_MCG_CAP:
@@ -421,11 +394,7 @@ int32_t rdmsr_vmexit_handler(struct acrn_vcpu *vcpu)
 	case MSR_IA32_SGXLEPUBKEYHASH3:
 	case MSR_IA32_SGX_SVN_STATUS:
 	{
-		if (is_vsgx_supported(vcpu->vm->vm_id)) {
-			v = msr_read(msr);
-		} else {
-			err = -EACCES;
-		}
+		err = -EACCES;
 		break;
 	}
 	default:
@@ -483,24 +452,6 @@ static void set_guest_tsc(struct acrn_vcpu *vcpu, uint64_t guest_tsc)
  * MSR adds (or subtracts) value X from that MSR, the logical
  * processor also adds (or subtracts) value X from the TSC."
  */
-
-/**
- * @pre vcpu != NULL
- */
-static void set_guest_tsc_adjust(struct acrn_vcpu *vcpu, uint64_t tsc_adjust)
-{
-	uint64_t tsc_offset, tsc_adjust_delta;
-
-	/* delta of the new and existing IA32_TSC_ADJUST */
-	tsc_adjust_delta = tsc_adjust - vcpu_get_guest_msr(vcpu, MSR_IA32_TSC_ADJUST);
-
-	/* apply this delta to existing TSC_OFFSET */
-	tsc_offset = exec_vmread64(VMX_TSC_OFFSET_FULL);
-	exec_vmwrite64(VMX_TSC_OFFSET_FULL, tsc_offset + tsc_adjust_delta);
-
-	/* IA32_TSC_ADJUST is supposed to carry the value it's written to */
-	vcpu_set_guest_msr(vcpu, MSR_IA32_TSC_ADJUST, tsc_adjust);
-}
 
 /**
  * @pre vcpu != NULL
@@ -570,16 +521,6 @@ int32_t wrmsr_vmexit_handler(struct acrn_vcpu *vcpu)
 
 	/* Do the required processing for each msr case */
 	switch (msr) {
-	case MSR_IA32_TSC_DEADLINE:
-	{
-		vlapic_set_tsc_deadline_msr(vcpu_vlapic(vcpu), v);
-		break;
-	}
-	case MSR_IA32_TSC_ADJUST:
-	{
-		set_guest_tsc_adjust(vcpu, v);
-		break;
-	}
 	case MSR_IA32_TIME_STAMP_COUNTER:
 	{
 		set_guest_tsc(vcpu, v);
@@ -598,31 +539,11 @@ int32_t wrmsr_vmexit_handler(struct acrn_vcpu *vcpu)
 	case MSR_IA32_MTRR_FIX4K_F0000:
 	case MSR_IA32_MTRR_FIX4K_F8000:
 	{
-		if (!vm_hide_mtrr(vcpu->vm)) {
-			write_vmtrr(vcpu, msr, v);
-		} else {
-			err = -EACCES;
-		}
-		break;
-	}
-	case MSR_IA32_BIOS_SIGN_ID:
-	{
+		err = -EACCES;
 		break;
 	}
 	case MSR_IA32_BIOS_UPDT_TRIG:
 	{
-		/* We only allow SOS to do uCode update */
-		if (is_sos_vm(vcpu->vm)) {
-			acrn_update_ucode(vcpu, v);
-		}
-		break;
-	}
-	case MSR_IA32_PERF_CTL:
-	{
-		if (validate_pstate(vcpu->vm, v) != 0) {
-			break;
-		}
-		msr_write(msr, v);
 		break;
 	}
 	case MSR_IA32_PAT:
@@ -668,39 +589,6 @@ int32_t wrmsr_vmexit_handler(struct acrn_vcpu *vcpu)
 	TRACE_2L(TRACE_VMEXIT_WRMSR, msr, v);
 
 	return err;
-}
-
-/**
- * @pre vcpu != NULL
- */
-void update_msr_bitmap_x2apic_apicv(struct acrn_vcpu *vcpu)
-{
-	uint8_t *msr_bitmap;
-
-	msr_bitmap = vcpu->arch.msr_bitmap;
-	/*
-	 * For platforms that do not support register virtualization
-	 * all x2APIC MSRs need to intercepted. So no need to update
-	 * the MSR bitmap.
-	 *
-	 * TPR is virtualized even when register virtualization is not
-	 * supported
-	 */
-	if (is_apicv_advanced_feature_supported()) {
-		intercept_x2apic_msrs(msr_bitmap, INTERCEPT_WRITE);
-		enable_msr_interception(msr_bitmap, MSR_IA32_EXT_APIC_CUR_COUNT, INTERCEPT_READ);
-		/*
-		 * Open read-only interception for write-only
-		 * registers to inject gp on reads. EOI and Self-IPI
-		 * Writes are disabled for EOI, TPR and Self-IPI as
-		 * writes to them are virtualized with Register Virtualization
-		 * Refer to Section 29.1 in Intel SDM Vol. 3
-		 */
-		enable_msr_interception(msr_bitmap, MSR_IA32_EXT_APIC_EOI, INTERCEPT_DISABLE);
-		enable_msr_interception(msr_bitmap, MSR_IA32_EXT_APIC_SELF_IPI, INTERCEPT_DISABLE);
-	}
-
-	enable_msr_interception(msr_bitmap, MSR_IA32_EXT_APIC_TPR, INTERCEPT_DISABLE);
 }
 
 /*

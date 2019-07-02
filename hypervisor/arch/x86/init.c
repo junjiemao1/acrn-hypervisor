@@ -18,12 +18,12 @@
 #include <seed.h>
 
 /* Push sp magic to top of stack for call trace */
-#define SWITCH_TO(rsp, to)                                              \
-{                                                                       \
-	asm volatile ("movq %0, %%rsp\n"                                \
-			"pushq %1\n"                                    \
-			"jmpq *%2\n"                                    \
-			 :                                              \
+#define SWITCH_TO(rsp, to)					      \
+{								       \
+	asm volatile ("movq %0, %%rsp\n"				\
+			"pushq %1\n"				    \
+			"jmpq *%2\n"				    \
+			 :					      \
 			 : "r"(rsp), "rm"(SP_BOTTOM_MAGIC), "a"(to));   \
 }
 
@@ -65,8 +65,6 @@ static void enter_guest_mode(uint16_t pcpu_id)
 static void init_primary_pcpu_post(void)
 {
 	init_debug_pre();
-
-	init_seed();
 
 	init_pcpu_post(BOOT_CPU_ID);
 

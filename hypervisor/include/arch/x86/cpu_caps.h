@@ -7,13 +7,6 @@
 #ifndef CPUINFO_H
 #define CPUINFO_H
 
-#define MAX_PSTATE	20U	/* max num of supported Px count */
-#define MAX_CSTATE	8U	/* max num of supported Cx count */
-/* We support MAX_CSTATE num of Cx, means have (MAX_CSTATE - 1) Cx entries,
- * i.e. supported Cx entry index range from 1 to MAX_CX_ENTRY.
- */
-#define MAX_CX_ENTRY	(MAX_CSTATE - 1U)
-
 /* CPUID feature words */
 #define	FEAT_1_ECX		0U     /* CPUID[1].ECX */
 #define	FEAT_1_EDX		1U     /* CPUID[1].EDX */
@@ -38,7 +31,6 @@ struct cpuinfo_x86 {
 
 bool has_monitor_cap(void);
 bool monitor_cap_buggy(void);
-bool is_apicv_advanced_feature_supported(void);
 bool pcpu_has_cap(uint32_t bit);
 bool pcpu_has_vmx_ept_cap(uint32_t bit_mask);
 bool pcpu_has_vmx_vpid_cap(uint32_t bit_mask);

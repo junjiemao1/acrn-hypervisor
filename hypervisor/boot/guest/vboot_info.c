@@ -22,7 +22,6 @@
 
 #define ACRN_DBG_BOOT	6U
 
-#define MAX_BOOT_PARAMS_LEN 64U
 #define INVALID_MOD_IDX		0xFFFFU
 
 /**
@@ -37,55 +36,6 @@ static void init_vm_ramdisk_info(struct acrn_vm *vm, const struct multiboot_modu
 		vm->sw.ramdisk_info.load_addr = vm->sw.kernel_info.kernel_load_addr + vm->sw.kernel_info.kernel_size;
 		vm->sw.ramdisk_info.load_addr = (void *)round_page_up((uint64_t)vm->sw.ramdisk_info.load_addr);
 		vm->sw.ramdisk_info.size = mod->mm_mod_end - mod->mm_mod_start;
-	}
-}
-
-/* There are two sources for sos_vm kernel cmdline:
- * - cmdline from direct boot mbi->cmdline
- * - cmdline from acrn stitching tool. mod[0].mm_string
- * We need to merge them together
- */
-static char kernel_cmdline[MAX_BOOTARGS_SIZE + 1U];
-
-/**
- * @pre vm != NULL && cmdline != NULL && cmdstr != NULL
- */
-static void merge_cmdline(const struct acrn_vm *vm, const char *cmdline, const char *cmdstr)
-{
-	char *cmd_dst = kernel_cmdline;
-	uint32_t cmdline_len, cmdstr_len;
-	uint32_t dst_avail; /* available room for cmd_dst[] */
-	uint32_t dst_len; /* the actual number of characters that are copied */
-
-	/*
-	 * Append seed argument for SOS
-	 * seed_arg string ends with a white space and '\0', so no aditional delimiter is needed
-	 */
-	append_seed_arg(cmd_dst, is_sos_vm(vm));
-	dst_len = strnlen_s(cmd_dst, MAX_BOOTARGS_SIZE);
-	dst_avail = MAX_BOOTARGS_SIZE + 1U - dst_len;
-	cmd_dst += dst_len;
-
-	cmdline_len = strnlen_s(cmdline, MAX_BOOTARGS_SIZE);
-	cmdstr_len = strnlen_s(cmdstr, MAX_BOOTARGS_SIZE);
-
-	/* reserve one character for the delimiter between 2 strings (one white space) */
-	if ((cmdline_len + cmdstr_len + 1U) >= dst_avail) {
-		panic("Multiboot bootarg string too long");
-	} else {
-		/* copy mbi->mi_cmdline */
-		(void)strncpy_s(cmd_dst, dst_avail, cmdline, cmdline_len);
-		dst_len = strnlen_s(cmd_dst, dst_avail);
-		dst_avail -= dst_len;
-		cmd_dst += dst_len;
-
-		/* overwrite '\0' with a white space */
-		(void)strncpy_s(cmd_dst, dst_avail, " ", 1U);
-		dst_avail -= 1U;
-		cmd_dst += 1U;
-
-		/* copy vm_config->os_config.bootargs */
-		(void)strncpy_s(cmd_dst, dst_avail, cmdstr, cmdstr_len);
 	}
 }
 
@@ -156,25 +106,8 @@ static void init_vm_bootargs_info(struct acrn_vm *vm, const struct multiboot_inf
 	struct acrn_vm_config *vm_config = get_vm_config(vm->vm_id);
 	char *bootargs = vm_config->os_config.bootargs;
 
-	if (vm_config->load_order == PRE_LAUNCHED_VM) {
-		vm->sw.bootargs_info.src_addr = bootargs;
-		vm->sw.bootargs_info.size = strnlen_s(bootargs, MAX_BOOTARGS_SIZE);
-	} else {
-		/* vm_config->load_order == SOS_VM */
-		if ((mbi->mi_flags & MULTIBOOT_INFO_HAS_CMDLINE) != 0U) {
-			/*
-			 * If there is cmdline from mbi->mi_cmdline, merge it with
-			 * vm_config->os_config.bootargs
-			 */
-			merge_cmdline(vm, hpa2hva((uint64_t)mbi->mi_cmdline), bootargs);
-
-			vm->sw.bootargs_info.src_addr = kernel_cmdline;
-			vm->sw.bootargs_info.size = strnlen_s(kernel_cmdline, MAX_BOOTARGS_SIZE);
-		} else {
-			vm->sw.bootargs_info.src_addr = bootargs;
-			vm->sw.bootargs_info.size = strnlen_s(bootargs, MAX_BOOTARGS_SIZE);
-		}
-	}
+	vm->sw.bootargs_info.src_addr = bootargs;
+	vm->sw.bootargs_info.size = strnlen_s(bootargs, MAX_BOOTARGS_SIZE);
 
 	/* Kernel bootarg and zero page are right before the kernel image */
 	if (vm->sw.bootargs_info.size > 0U) {
@@ -266,51 +199,6 @@ static int32_t init_general_vm_boot_info(struct acrn_vm *vm)
 	return ret;
 }
 
-static void depri_boot_spurious_handler(uint32_t vector)
-{
-	if (get_pcpu_id() == BOOT_CPU_ID) {
-		struct acrn_vcpu *vcpu = per_cpu(vcpu, BOOT_CPU_ID);
-
-		if (vcpu != NULL) {
-			vlapic_set_intr(vcpu, vector, LAPIC_TRIG_EDGE);
-		} else {
-			pr_err("%s vcpu or vlapic is not ready, interrupt lost\n", __func__);
-		}
-	}
-}
-
-static int32_t depri_boot_sw_loader(struct acrn_vm *vm)
-{
-	int32_t ret = 0;
-	/* get primary vcpu */
-	struct acrn_vcpu *vcpu = vcpu_from_vid(vm, BOOT_CPU_ID);
-	struct acrn_vcpu_regs *vcpu_regs = &boot_context;
-	const struct depri_boot_context *depri_boot_ctx = get_depri_boot_ctx();
-	const struct lapic_regs *depri_boot_lapic_regs = get_depri_boot_lapic_regs();
-
-	pr_dbg("Loading guest to run-time location");
-
-	vlapic_restore(vcpu_vlapic(vcpu), depri_boot_lapic_regs);
-
-	/* For UEFI platform, the bsp init regs come from two places:
-	 * 1. saved in depri_boot: gpregs, rip
-	 * 2. saved when HV started: other registers
-	 * We copy the info saved in depri_boot to boot_context and
-	 * init bsp with boot_context.
-	 */
-	(void)memcpy_s(&(vcpu_regs->gprs), sizeof(struct acrn_gp_regs),
-		&(depri_boot_ctx->vcpu_regs.gprs), sizeof(struct acrn_gp_regs));
-
-	vcpu_regs->rip = depri_boot_ctx->vcpu_regs.rip;
-	set_vcpu_regs(vcpu, vcpu_regs);
-
-	/* defer irq enabling till vlapic is ready */
-	spurious_handler = depri_boot_spurious_handler;
-	CPU_IRQ_ENABLE();
-
-	return ret;
-}
-
 /**
  * @param[inout] vm pointer to a vm descriptor
  *
@@ -323,12 +211,8 @@ int32_t init_vm_boot_info(struct acrn_vm *vm)
 {
 	int32_t ret = 0;
 
-	if (is_sos_vm(vm) && (get_sos_boot_mode() == DEPRI_BOOT_MODE)) {
-		vm_sw_loader = depri_boot_sw_loader;
-	} else {
-		vm_sw_loader = direct_boot_sw_loader;
-		ret = init_general_vm_boot_info(vm);
-	}
+	vm_sw_loader = direct_boot_sw_loader;
+	ret = init_general_vm_boot_info(vm);
 
 	return ret;
 }

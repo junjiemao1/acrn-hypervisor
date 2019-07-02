@@ -143,119 +143,6 @@ int32_t vdev_pt_read_cfg(const struct pci_vdev *vdev, uint32_t offset, uint32_t 
 }
 
 /**
-* @pre vdev != NULL
-* @pre vdev->vpci != NULL
-* @pre vdev->vpci->vm != NULL
-* @pre vdev->pdev != NULL
-* @pre vdev->pdev->msix.table_bar < vdev->nr_bars
-*/
-void vdev_pt_remap_msix_table_bar(struct pci_vdev *vdev)
-{
-	uint32_t i;
-	struct pci_msix *msix = &vdev->msix;
-	struct pci_pdev *pdev = vdev->pdev;
-	struct pci_bar *pbar;
-
-	ASSERT(vdev->pdev->msix.table_bar < vdev->nr_bars, "msix->table_bar is out of range");
-
-	/* Mask all table entries */
-	for (i = 0U; i < msix->table_count; i++) {
-		msix->table_entries[i].vector_control = PCIM_MSIX_VCTRL_MASK;
-		msix->table_entries[i].addr = 0U;
-		msix->table_entries[i].data = 0U;
-	}
-
-	pbar = &pdev->bar[msix->table_bar];
-	if (pbar != NULL) {
-		uint64_t pbar_base = get_pbar_base(pdev, msix->table_bar); /* pbar (hpa) */
-
-		msix->mmio_hpa = pbar_base;
-		if (is_prelaunched_vm(vdev->vpci->vm)) {
-			msix->mmio_gpa = get_vbar_base(vdev, msix->table_bar);
-		} else {
-			msix->mmio_gpa = sos_vm_hpa2gpa(pbar_base);
-		}
-		msix->mmio_size = pbar->size;
-	}
-
-	/*
-	 *    For SOS:
-	 *    --------
-	 *    MSI-X Table BAR Contains:
-	 *    Other Info + Tables + PBA	        Other info already mapped into EPT (since SOS)
-	 *    					Tables are handled by HV MMIO handler (4k adjusted up and down)
-	 *    						and remaps interrupts
-	 *    					PBA already mapped into EPT (since SOS)
-	 *
-	 *    Other Info + Tables		Other info already mapped into EPT (since SOS)
-	 *					Tables are handled by HV MMIO handler (4k adjusted up and down)
-	 *						and remaps interrupts
-	 *
-	 *    Tables				Tables are handled by HV MMIO handler (4k adjusted up and down)
-	 *    						and remaps interrupts
-	 *
-	 *    For UOS (launched by DM):
-	 *    -------------------------
-	 *    MSI-X Table BAR Contains:
-	 *    Other Info + Tables + PBA		Other info  mapped into EPT (4k adjusted) by DM
-	 *    					Tables are handled by DM MMIO handler (4k adjusted up and down) and SOS writes to tables,
-	 *    						intercepted by HV MMIO handler and HV remaps interrupts
-	 *    					PBA already mapped into EPT by DM
-	 *
-	 *    Other Info + Tables		Other info mapped into EPT by DM
-	 *    					Tables are handled by DM MMIO handler (4k adjusted up and down) and SOS writes to tables,
-	 *    						intercepted by HV MMIO handler and HV remaps interrupts.
-	 *
-	 *    Tables				Tables are handled by DM MMIO handler (4k adjusted up and down) and SOS writes to tables,
-	 *    						intercepted by HV MMIO handler and HV remaps interrupts.
-	 *
-	 *    For Pre-launched VMs (no SOS/DM):
-	 *    --------------------------------
-	 *    MSI-X Table BAR Contains:
-	 *    All 3 cases:			Writes to MMIO region in MSI-X Table BAR handled by HV MMIO handler
-	 *    					If the offset falls within the MSI-X table [offset, offset+tables_size), HV remaps
-	 *    						interrupts.
-	 *    					Else, HV writes/reads to/from the corresponding HPA
-	 */
-
-
-	if (msix->mmio_gpa != 0UL) {
-		uint64_t addr_hi, addr_lo;
-
-		if (is_prelaunched_vm(vdev->vpci->vm)) {
-			addr_hi = msix->mmio_gpa + msix->mmio_size;
-			addr_lo = msix->mmio_gpa;
-		} else {
-			/*
-			* PCI Spec: a BAR may also map other usable address space that is not associated
-			* with MSI-X structures, but it must not share any naturally aligned 4 KB
-			* address range with one where either MSI-X structure resides.
-			* The MSI-X Table and MSI-X PBA are permitted to co-reside within a naturally
-			* aligned 4 KB address range.
-			*
-			* If PBA or others reside in the same BAR with MSI-X Table, devicemodel could
-			* emulate them and maps these memory range at the 4KB boundary. Here, we should
-			* make sure only intercept the minimum number of 4K pages needed for MSI-X table.
-			*/
-
-			/* The higher boundary of the 4KB aligned address range for MSI-X table */
-			addr_hi = msix->mmio_gpa + msix->table_offset + (msix->table_count * MSIX_TABLE_ENTRY_SIZE);
-			addr_hi = round_page_up(addr_hi);
-
-			/* The lower boundary of the 4KB aligned address range for MSI-X table */
-			addr_lo = round_page_down(msix->mmio_gpa + msix->table_offset);
-		}
-
-		if (vdev->bar_base_mapped[msix->table_bar] != addr_lo) {
-			register_mmio_emulation_handler(vdev->vpci->vm, vmsix_table_mmio_access_handler,
-				addr_lo, addr_hi, vdev);
-			/* Remember the previously registered MMIO vbar base */
-			vdev->bar_base_mapped[msix->table_bar] = addr_lo;
-		}
-	}
-}
-
-/**
  * @brief Remaps guest MMIO BARs other than MSI-x Table BAR
  * This API is invoked upon guest re-programming PCI BAR with MMIO region
  * after a new vbar is set.
@@ -314,11 +201,7 @@ static void vdev_pt_remap_mem_vbar(struct pci_vdev *vdev, uint32_t idx)
 
 	is_msix_table_bar = (has_msix_cap(vdev) && (idx == vdev->msix.table_bar));
 
-	if (is_msix_table_bar) {
-		vdev_pt_remap_msix_table_bar(vdev);
-	} else {
-		vdev_pt_remap_generic_mem_vbar(vdev, idx);
-	}
+	vdev_pt_remap_generic_mem_vbar(vdev, idx);
 }
 
 /**
@@ -448,47 +331,45 @@ void init_vdev_pt(struct pci_vdev *vdev)
 
 	ASSERT(vdev->nr_bars > 0U, "vdev->nr_bars should be greater than 0!");
 
-	if (is_prelaunched_vm(vdev->vpci->vm)) {
-		for (idx = 0U; idx < vdev->nr_bars; idx++) {
-			pbar = &vdev->pdev->bar[idx];
-			vbar = &vdev->bar[idx];
+	for (idx = 0U; idx < vdev->nr_bars; idx++) {
+		pbar = &vdev->pdev->bar[idx];
+		vbar = &vdev->bar[idx];
 
-			if (is_bar_supported(pbar)) {
-				vbar->reg.value = pbar->reg.value;
-				vbar->reg.bits.mem.base = 0x0U; /* clear vbar base */
-				if (vbar->reg.bits.mem.type == 0x2U) {
-					/* Clear vbar 64-bit flag and set it to 32-bit */
-					vbar->reg.bits.mem.type = 0x0U;
-				}
-
-				/**
-				 * If vbar->base is 0 (unassigned), Linux kernel will reprogram the vbar on
-				 * its bar size boundary, so in order to ensure the MMIO vbar allocated by guest
-				 * is 4k aligned, set its size to be 4K aligned.
-				 */
-				vbar->size = round_page_up(pbar->size);
-
-				/**
-				 * Only 32-bit bar is supported for now so both PCIBAR_MEM32 and PCIBAR_MEM64
-				 * are reported to guest as PCIBAR_MEM32
-				 */
-				vbar->type = PCIBAR_MEM32;
-
-				/* For pre-launched VMs: vbar base is predefined in vm_config */
-				vbar_base = vdev->ptdev_config->vbar_base[idx];
-
-				/* Set the new vbar base */
-				vdev_pt_write_vbar(vdev, pci_bar_offset(idx), (uint32_t)vbar_base);
-			} else {
-				vbar->reg.value = 0x0U;
-				vbar->size = 0UL;
-				vbar->type = PCIBAR_NONE;
+		if (is_bar_supported(pbar)) {
+			vbar->reg.value = pbar->reg.value;
+			vbar->reg.bits.mem.base = 0x0U; /* clear vbar base */
+			if (vbar->reg.bits.mem.type == 0x2U) {
+				/* Clear vbar 64-bit flag and set it to 32-bit */
+				vbar->reg.bits.mem.type = 0x0U;
 			}
-		}
 
-		pci_command = (uint16_t)pci_pdev_read_cfg(vdev->pdev->bdf, PCIR_COMMAND, 2U);
-		/* Disable INTX */
-		pci_command |= 0x400U;
-		pci_pdev_write_cfg(vdev->pdev->bdf, PCIR_COMMAND, 2U, pci_command);
+			/**
+			 * If vbar->base is 0 (unassigned), Linux kernel will reprogram the vbar on
+			 * its bar size boundary, so in order to ensure the MMIO vbar allocated by guest
+			 * is 4k aligned, set its size to be 4K aligned.
+			 */
+			vbar->size = round_page_up(pbar->size);
+
+			/**
+			 * Only 32-bit bar is supported for now so both PCIBAR_MEM32 and PCIBAR_MEM64
+			 * are reported to guest as PCIBAR_MEM32
+			 */
+			vbar->type = PCIBAR_MEM32;
+
+			/* For pre-launched VMs: vbar base is predefined in vm_config */
+			vbar_base = vdev->ptdev_config->vbar_base[idx];
+
+			/* Set the new vbar base */
+			vdev_pt_write_vbar(vdev, pci_bar_offset(idx), (uint32_t)vbar_base);
+		} else {
+			vbar->reg.value = 0x0U;
+			vbar->size = 0UL;
+			vbar->type = PCIBAR_NONE;
+		}
 	}
+
+	pci_command = (uint16_t)pci_pdev_read_cfg(vdev->pdev->bdf, PCIR_COMMAND, 2U);
+	/* Disable INTX */
+	pci_command |= 0x400U;
+	pci_pdev_write_cfg(vdev->pdev->bdf, PCIR_COMMAND, 2U, pci_command);
 }

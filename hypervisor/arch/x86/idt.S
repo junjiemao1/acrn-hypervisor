@@ -30,17 +30,15 @@ HOST_IDTR:
 .endm
 
 .macro	trap_descriptor entry, dpl=0, ist=0
-        /* 0x0008 = HOST_GDT_RING0_CODE_SEL */
+	/* 0x0008 = HOST_GDT_RING0_CODE_SEL */
 	.long	0x0008 << 16
 	.long	0x00008f00 + (dpl <<13) + ist
 	.quad	entry
 .endm
 
-
 .macro _external_interrupt_descriptor vector
     __external_interrupt_descriptor %vector
 .endm
-
 
 .macro	__external_interrupt_descriptor vector
 	interrupt_descriptor external_interrupt_\vector
@@ -110,9 +108,6 @@ excp_debug:
 
 .align 8
 excp_nmi:
-
-
-
 
 .align 8
 excp_breakpoint:
@@ -203,8 +198,6 @@ excp_virtualization:
 	pushq  $0x14
 	jmp    excp_save_frame
 
-
-
 /*
  * Macros for rsvd vectors.  Vectors 0x09, 0x0F, 0x15 through 0x1F
  */
@@ -234,8 +227,6 @@ vector = 0x15
     vector = vector + 1
 .endr
 
-
-
 /*
  * Macros for external interrupts.  Vectors$0x20 through$0xFF
  */
@@ -256,8 +247,6 @@ vector =0x20
     _external_interrupt vector
     vector = vector + 1
 .endr
-
-
 
 /*
  * Common entry point for defined exceptions
@@ -280,7 +269,6 @@ excp_save_frame:
     pushq %rdx
     pushq %rcx
     pushq %rax
-
 
     /* Put current stack pointer into 1st param register (rdi) */
     movq    %rsp, %rdi
@@ -308,7 +296,6 @@ excp_save_frame:
     add     $16, %rsp
 
     iretq
-
 
 /*
  * Common entry point for reserved exceptions.
@@ -360,7 +347,6 @@ excp_rsvd:
     add     $16, %rsp
 
     iretq
-
 
 /*
  * Common entry point for defined interrupts.
@@ -416,4 +402,3 @@ external_interrupt_save_frame:
     add     $16, %rsp
 
     iretq
-

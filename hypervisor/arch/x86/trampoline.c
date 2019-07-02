@@ -29,19 +29,6 @@ static uint64_t trampoline_relo_addr(const void *addr)
 	return (uint64_t)addr - get_hv_image_delta();
 }
 
-uint64_t read_trampoline_sym(const void *sym)
-{
-	uint64_t *hva = (uint64_t *)(hpa2hva(trampoline_start16_paddr) + trampoline_relo_addr(sym));
-	return *hva;
-}
-
-void write_trampoline_sym(const void *sym, uint64_t val)
-{
-	uint64_t *hva = (uint64_t *)(hpa2hva(trampoline_start16_paddr) + trampoline_relo_addr(sym));
-	*hva = val;
-	clflush(hva);
-}
-
 void write_trampoline_stack_sym(uint16_t pcpu_id)
 {
 	uint64_t *hva, stack_sym_addr;
@@ -52,11 +39,6 @@ void write_trampoline_stack_sym(uint16_t pcpu_id)
 	*hva = stack_sym_addr;
 
 	clflush(hva);
-}
-
-uint64_t get_trampoline_start16_paddr(void)
-{
-	return trampoline_start16_paddr;
 }
 
 static void update_trampoline_code_refs(uint64_t dest_pa)

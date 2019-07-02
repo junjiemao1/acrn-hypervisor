@@ -20,7 +20,6 @@
  * Definition of an 16 byte IDT selector.
  */
 union idt_64_descriptor {
-	uint64_t value;
 	struct {
 		union {
 			uint32_t value;
@@ -54,14 +53,12 @@ union idt_64_descriptor {
  *
  *****************************************************************************/
 struct host_idt {
-	union idt_64_descriptor host_idt_descriptors[HOST_IDT_ENTRIES];
 } __aligned(8);
 
 /*
  * Definition of the IDT descriptor.
  */
 struct host_idt_descriptor {
-	uint16_t len;
 	struct host_idt *idt;
 } __packed;
 

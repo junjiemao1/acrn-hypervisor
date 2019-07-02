@@ -14,24 +14,18 @@
 
 #ifndef ASSEMBLER
 
-/* Define standard data types.  These definitions allow software components
- * to perform in the same manner on different target platforms.
- */
-typedef signed char int8_t;
 typedef unsigned char uint8_t;
 typedef signed short int16_t;
 typedef unsigned short uint16_t;
 typedef signed int int32_t;
 typedef unsigned int uint32_t;
 typedef unsigned long uint64_t;
-typedef signed long int64_t;
 typedef unsigned int size_t;
-typedef __builtin_va_list va_list;
 
 typedef _Bool bool;
 
 #ifndef NULL
-#define         NULL                                ((void *) 0)
+#define	 NULL				((void *) 0)
 #endif
 
 #ifndef true

@@ -9,8 +9,6 @@
 
 /** Indicates that operation not permitted. */
 #define EPERM		1
-/** Indicates that there is IO error. */
-#define EIO		5
 /** Indicates that not enough memory. */
 #define ENOMEM		12
 /** Indicates Permission denied */

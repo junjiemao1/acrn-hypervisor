@@ -17,7 +17,6 @@ struct vcpuid_entry {
 	uint32_t leaf;
 	uint32_t subleaf;
 	uint32_t flags;
-	uint32_t padding;
 };
 
 int32_t set_vcpuid_entries(struct acrn_vm *vm);

@@ -34,7 +34,6 @@
 #include <vpci.h>
 #include "vpci_priv.h"
 
-
 /**
  * @pre vdev != NULL
  */
@@ -227,4 +226,3 @@ void init_vmsi(struct pci_vdev *vdev)
 		buf_write32(&vdev->cfgdata.data_8[pdev->msi.capoff], val);
 	}
 }
-

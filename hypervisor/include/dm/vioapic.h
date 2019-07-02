@@ -40,72 +40,12 @@
 #include <apicreg.h>
 #include <util.h>
 
-#define	VIOAPIC_BASE	0xFEC00000UL
-#define	VIOAPIC_SIZE	4096UL
-#define	VIOAPIC_MAX_PIN	 256U
-
-#define REDIR_ENTRIES_HW	120U /* SOS align with native ioapic */
-#define STATE_BITMAP_SIZE	INT_DIV_ROUNDUP(REDIR_ENTRIES_HW, 64U)
-
-#define IOAPIC_RTE_LOW_INTVEC	((uint32_t)IOAPIC_RTE_INTVEC)
-
-struct acrn_vioapic {
-	struct acrn_vm	*vm;
-	spinlock_t	mtx;
-	uint32_t	id;
-	bool		ready;
-	uint32_t	ioregsel;
-	union ioapic_rte rtbl[REDIR_ENTRIES_HW];
-	/* pin_state status bitmap: 1 - high, 0 - low */
-	uint64_t pin_state[STATE_BITMAP_SIZE];
-	struct ptirq_remapping_info *vpin_to_pt_entry[VIOAPIC_MAX_PIN];
-};
-
-void    vioapic_init(struct acrn_vm *vm);
-void	vioapic_reset(struct acrn_vm *vm);
-
-
 /**
  * @brief virtual I/O APIC
  *
  * @addtogroup acrn_vioapic ACRN vIOAPIC
  * @{
  */
-
-/**
- * @brief Set vIOAPIC IRQ line status.
- *
- * @param[in] vm        Pointer to target VM
- * @param[in] irqline   Target IRQ number
- * @param[in] operation Action options: GSI_SET_HIGH/GSI_SET_LOW/
- *			GSI_RAISING_PULSE/GSI_FALLING_PULSE
- *
- * @pre irqline < vioapic_pincount(vm)
- *
- * @return None
- */
-void	vioapic_set_irqline_lock(const struct acrn_vm *vm, uint32_t irqline, uint32_t operation);
-
-/**
- * @brief Set vIOAPIC IRQ line status.
- *
- * Similar with vioapic_set_irqline_lock(),but would not make sure
- * operation be done with ioapic lock.
- *
- * @param[in] vm        Pointer to target VM
- * @param[in] irqline   Target IRQ number
- * @param[in] operation Action options: GSI_SET_HIGH/GSI_SET_LOW/
- *			GSI_RAISING_PULSE/GSI_FALLING_PULSE
- *
- * @pre irqline < vioapic_pincount(vm)
- * @return None
- */
-void	vioapic_set_irqline_nolock(const struct acrn_vm *vm, uint32_t irqline, uint32_t operation);
-
-uint32_t	vioapic_pincount(const struct acrn_vm *vm);
-void	vioapic_process_eoi(struct acrn_vm *vm, uint32_t vector);
-void	vioapic_get_rte(struct acrn_vm *vm, uint32_t pin, union ioapic_rte *rte);
-int32_t	vioapic_mmio_access_handler(struct io_request *io_req, void *handler_private_data);
 
 /**
  * @}

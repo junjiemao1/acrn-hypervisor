@@ -74,17 +74,6 @@ static inline uint16_t fls32(uint32_t value)
 	return (uint16_t)ret;
 }
 
-static inline uint16_t fls64(uint64_t value)
-{
-	uint64_t ret = 0UL;
-	asm volatile("bsrq %1,%0\n\t"
-			"jnz 1f\n\t"
-			"mov %2,%0\n"
-			"1:" : "=r" (ret)
-			: "rm" (value), "i" (INVALID_BIT_INDEX));
-	return (uint16_t)ret;
-}
-
 /*
  *
  * ffs64 - Find the First (least significant) bit Set in value(Long type)
@@ -127,7 +116,6 @@ static inline uint16_t ffz64(uint64_t value)
 	return ffs64(~value);
 }
 
-
 /*
  * find the first zero bit in a uint64_t array.
  * @pre: the size must be multiple of 64.
@@ -145,37 +133,6 @@ static inline uint64_t ffz64_ex(const uint64_t *addr, uint64_t size)
 	}
 
 	return ret;
-}
-/*
- * Counts leading zeros.
- *
- * The number of leading zeros is defined as the number of
- * most significant bits which are not '1'. E.g.:
- *    clz(0x80000000)==0
- *    clz(0x40000000)==1
- *       ...
- *    clz(0x00000001)==31
- *    clz(0x00000000)==32
- *
- * @param value:The 32 bit value to count the number of leading zeros.
- *
- * @return The number of leading zeros in 'value'.
- */
-static inline uint16_t clz(uint32_t value)
-{
-	return ((value != 0U) ? (31U - fls32(value)) : 32U);
-}
-
-/*
- * Counts leading zeros (64 bit version).
- *
- * @param value:The 64 bit value to count the number of leading zeros.
- *
- * @return The number of leading zeros in 'value'.
- */
-static inline uint16_t clz64(uint64_t value)
-{
-	return ((value != 0UL) ? (63U - fls64(value)) : 64U);
 }
 
 /*
@@ -195,8 +152,6 @@ static inline void name(uint16_t nr_arg, volatile op_type *addr)	\
 }
 build_bitmap_set(bitmap_set_nolock, "q", uint64_t, "")
 build_bitmap_set(bitmap_set_lock, "q", uint64_t, BUS_LOCK)
-build_bitmap_set(bitmap32_set_nolock, "l", uint32_t, "")
-build_bitmap_set(bitmap32_set_lock, "l", uint32_t, BUS_LOCK)
 
 /*
  * (*addr) &= ~(1UL<<nr);
@@ -216,7 +171,6 @@ static inline void name(uint16_t nr_arg, volatile op_type *addr)	\
 build_bitmap_clear(bitmap_clear_nolock, "q", uint64_t, "")
 build_bitmap_clear(bitmap_clear_lock, "q", uint64_t, BUS_LOCK)
 build_bitmap_clear(bitmap32_clear_nolock, "l", uint32_t, "")
-build_bitmap_clear(bitmap32_clear_lock, "l", uint32_t, BUS_LOCK)
 
 /*
  * return !!((*addr) & (1UL<<nr));
@@ -229,16 +183,6 @@ static inline bool bitmap_test(uint16_t nr, const volatile uint64_t *addr)
 	asm volatile("btq %q2,%1\n\tsbbl %0, %0"
 			: "=r" (ret)
 			: "m" (*addr), "r" ((uint64_t)(nr & 0x3fU))
-			: "cc", "memory");
-	return (ret != 0);
-}
-
-static inline bool bitmap32_test(uint16_t nr, const volatile uint32_t *addr)
-{
-	int32_t ret = 0;
-	asm volatile("btl %2,%1\n\tsbbl %0, %0"
-			: "=r" (ret)
-			: "m" (*addr), "r" ((uint32_t)(nr & 0x1fU))
 			: "cc", "memory");
 	return (ret != 0);
 }
@@ -262,10 +206,7 @@ static inline bool name(uint16_t nr_arg, volatile op_type *addr)	\
 			: "cc", "memory");				\
 	return (ret != 0);						\
 }
-build_bitmap_testandset(bitmap_test_and_set_nolock, "q", uint64_t, "")
 build_bitmap_testandset(bitmap_test_and_set_lock, "q", uint64_t, BUS_LOCK)
-build_bitmap_testandset(bitmap32_test_and_set_nolock, "l", uint32_t, "")
-build_bitmap_testandset(bitmap32_test_and_set_lock, "l", uint32_t, BUS_LOCK)
 
 /*
  * bool ret = (*addr) & (1UL<<nr);
@@ -288,7 +229,5 @@ static inline bool name(uint16_t nr_arg, volatile op_type *addr)	\
 }
 build_bitmap_testandclear(bitmap_test_and_clear_nolock, "q", uint64_t, "")
 build_bitmap_testandclear(bitmap_test_and_clear_lock, "q", uint64_t, BUS_LOCK)
-build_bitmap_testandclear(bitmap32_test_and_clear_nolock, "l", uint32_t, "")
-build_bitmap_testandclear(bitmap32_test_and_clear_lock, "l", uint32_t, BUS_LOCK)
 
 #endif /* BITS_H*/

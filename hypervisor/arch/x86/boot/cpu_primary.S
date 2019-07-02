@@ -150,7 +150,7 @@ primary_start_long_mode:
 .data
 jmpbuf: .quad 0
 	/* 0x0008 = HOST_GDT_RING0_CODE_SEL */
-        .word 0x0008
+	.word 0x0008
 .text
 after:
     /* 0x10 = HOST_GDT_RING0_DATA_SEL*/
