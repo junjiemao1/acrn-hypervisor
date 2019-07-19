@@ -98,11 +98,7 @@ uint32_t
 vlapic_get_apicid(const struct acrn_vlapic *vlapic)
 {
 	uint32_t apicid;
-	if (is_x2apic_enabled(vlapic)) {
-		apicid = vlapic->apic_page.id.v;
-	} else {
-		apicid = (vlapic->apic_page.id.v) >> APIC_ID_SHIFT;
-	}
+	apicid = vlapic->apic_page.id.v;
 
 	return apicid;
 }
@@ -115,11 +111,7 @@ vlapic_build_id(const struct acrn_vlapic *vlapic)
 
 	vlapic_id = (uint32_t)vcpu->vcpu_id;
 
-	if (is_x2apic_enabled(vlapic)) {
-		lapic_regs_id = vlapic_id;
-	} else {
-		lapic_regs_id = vlapic_id << APIC_ID_SHIFT;
-	}
+	lapic_regs_id = vlapic_id;
 
 	dev_dbg(ACRN_DBG_LAPIC, "vlapic APIC PAGE ID : 0x%08x", lapic_regs_id);
 
@@ -382,42 +374,12 @@ static inline bool is_dest_field_matched(const struct acrn_vlapic *vlapic, uint3
 	uint32_t ldr = vlapic->apic_page.ldr.v;
 	bool ret = false;
 
-	if (is_x2apic_enabled(vlapic)) {
-		logical_id = ldr & 0xFFFFU;
-		cluster_id = (ldr >> 16U) & 0xFFFFU;
-		dest_logical_id = dest & 0xFFFFU;
-		dest_cluster_id = (dest >> 16U) & 0xFFFFU;
-		if ((cluster_id == dest_cluster_id) && ((logical_id & dest_logical_id) != 0U)) {
-			ret = true;
-		}
-	} else {
-		uint32_t dfr = vlapic->apic_page.dfr.v;
-		if ((dfr & APIC_DFR_MODEL_MASK) == APIC_DFR_MODEL_FLAT) {
-			/*
-			 * In the "Flat Model" the MDA is interpreted as an 8-bit wide
-			 * bitmask. This model is available in the xAPIC mode only.
-			 */
-			logical_id = ldr >> 24U;
-			dest_logical_id = dest & 0xffU;
-			if ((logical_id & dest_logical_id) != 0U) {
-				ret = true;
-			}
-		} else if ((dfr & APIC_DFR_MODEL_MASK) == APIC_DFR_MODEL_CLUSTER) {
-			/*
-			 * In the "Cluster Model" the MDA is used to identify a
-			 * specific cluster and a set of APICs in that cluster.
-			 */
-			logical_id = (ldr >> 24U) & 0xfU;
-			cluster_id = ldr >> 28U;
-			dest_logical_id = dest & 0xfU;
-			dest_cluster_id = (dest >> 4U) & 0xfU;
-			if ((cluster_id == dest_cluster_id) && ((logical_id & dest_logical_id) != 0U)) {
-				ret = true;
-			}
-		} else {
-			/* Guest has configured a bad logical model for this vcpu. */
-			dev_dbg(ACRN_DBG_LAPIC,	"vlapic has bad logical model %x", dfr);
-		}
+	logical_id = ldr & 0xFFFFU;
+	cluster_id = (ldr >> 16U) & 0xFFFFU;
+	dest_logical_id = dest & 0xFFFFU;
+	dest_cluster_id = (dest >> 16U) & 0xFFFFU;
+	if ((cluster_id == dest_cluster_id) && ((logical_id & dest_logical_id) != 0U)) {
+		ret = true;
 	}
 
 	return ret;
@@ -650,30 +612,6 @@ int32_t vlapic_set_apicbase(struct acrn_vlapic *vlapic, uint64_t new)
 	return ret;
 }
 
-/*
- * @pre vm != NULL
- */
-bool is_x2apic_enabled(const struct acrn_vlapic *vlapic)
-{
-	bool ret = false;
-
-	if ((vlapic_get_apicbase(vlapic) & APICBASE_LAPIC_MODE) == (APICBASE_X2APIC | APICBASE_XAPIC)) {
-		ret = true;
-	}
-
-	return ret;
-}
-
-bool is_xapic_enabled(const struct acrn_vlapic *vlapic)
-{
-	bool ret = false;
-	if ((vlapic_get_apicbase(vlapic) & APICBASE_LAPIC_MODE) == APICBASE_XAPIC) {
-		ret = true;
-	}
-
-	return ret;
-}
-
 static inline  uint32_t x2apic_msr_to_regoff(uint32_t msr)
 {
 
@@ -722,14 +660,11 @@ vlapic_x2apic_pt_icr_access(struct acrn_vm *vm, uint64_t val)
 				vlapic_process_init_sipi(target_vcpu, mode, icr_low);
 			break;
 			default:
-				/* convert the dest from virtual apic_id to physical apic_id */
-				if (is_x2apic_enabled(vcpu_vlapic(target_vcpu))) {
-					papic_id = per_cpu(lapic_id, target_vcpu->pcpu_id);
-					dev_dbg(ACRN_DBG_LAPICPT,
-						"%s vapic_id: 0x%08lx papic_id: 0x%08lx icr_low:0x%08lx",
-						 __func__, vapic_id, papic_id, icr_low);
-					msr_write(MSR_IA32_EXT_APIC_ICR, (((uint64_t)papic_id) << 32U) | icr_low);
-				}
+				papic_id = per_cpu(lapic_id, target_vcpu->pcpu_id);
+				dev_dbg(ACRN_DBG_LAPICPT,
+					"%s vapic_id: 0x%08lx papic_id: 0x%08lx icr_low:0x%08lx",
+					 __func__, vapic_id, papic_id, icr_low);
+				msr_write(MSR_IA32_EXT_APIC_ICR, (((uint64_t)papic_id) << 32U) | icr_low);
 			break;
 			}
 			ret = 0;
@@ -749,17 +684,15 @@ int32_t vlapic_x2apic_read(struct acrn_vcpu *vcpu, uint32_t msr, uint64_t *val)
 	 * inject a GP to guest
 	 */
 	vlapic = vcpu_vlapic(vcpu);
-	if (is_x2apic_enabled(vlapic)) {
-		switch (msr) {
-		case MSR_IA32_EXT_APIC_LDR:
-		case MSR_IA32_EXT_XAPICID:
-			offset = x2apic_msr_to_regoff(msr);
-			error = vlapic_read(vlapic, offset, val);
-			break;
-		default:
-			pr_err("%s: unexpected MSR[0x%x] read with lapic_pt", __func__, msr);
-			break;
-		}
+	switch (msr) {
+	case MSR_IA32_EXT_APIC_LDR:
+	case MSR_IA32_EXT_XAPICID:
+		offset = x2apic_msr_to_regoff(msr);
+		error = vlapic_read(vlapic, offset, val);
+		break;
+	default:
+		pr_err("%s: unexpected MSR[0x%x] read with lapic_pt", __func__, msr);
+		break;
 	}
 
 	return error;
@@ -776,15 +709,13 @@ int32_t vlapic_x2apic_write(struct acrn_vcpu *vcpu, uint32_t msr, uint64_t val)
 	 * inject a GP to guest
 	 */
 	vlapic = vcpu_vlapic(vcpu);
-	if (is_x2apic_enabled(vlapic)) {
-		switch (msr) {
-		case MSR_IA32_EXT_APIC_ICR:
-			error = vlapic_x2apic_pt_icr_access(vcpu->vm, val);
-			break;
-		default:
-			pr_err("%s: unexpected MSR[0x%x] write with lapic_pt", __func__, msr);
-			break;
-		}
+	switch (msr) {
+	case MSR_IA32_EXT_APIC_ICR:
+		error = vlapic_x2apic_pt_icr_access(vcpu->vm, val);
+		break;
+	default:
+		pr_err("%s: unexpected MSR[0x%x] write with lapic_pt", __func__, msr);
+		break;
 	}
 
 	return error;
@@ -809,15 +740,6 @@ int32_t vlapic_create(struct acrn_vcpu *vcpu)
 	return 0;
 }
 
-/*
- *  @pre vcpu != NULL
- */
-void vlapic_free(struct acrn_vcpu *vcpu)
-{
-	struct acrn_vlapic *vlapic = vcpu_vlapic(vcpu);
-
-}
-
 /**
  *APIC-v: Get the HPA to APIC-access page
  * **/
@@ -828,15 +750,6 @@ vlapic_apicv_get_apic_access_addr(void)
 	static uint8_t apicv_apic_access_addr[PAGE_SIZE] __aligned(PAGE_SIZE);
 
 	return hva2hpa(apicv_apic_access_addr);
-}
-
-/**
- *APIC-v: Get the HPA to virtualized APIC registers page
- * **/
-uint64_t
-vlapic_apicv_get_apic_page_addr(struct acrn_vlapic *vlapic)
-{
-	return hva2hpa(&(vlapic->apic_page));
 }
 
 bool vlapic_inject_intr(struct acrn_vlapic *vlapic, bool guest_irq_enabled, bool injected)

@@ -359,14 +359,6 @@ static void init_exec_ctrl(struct acrn_vcpu *vcpu)
 	exec_vmwrite32(VMX_PROC_VM_EXEC_CONTROLS2, value32);
 	pr_dbg("VMX_PROC_VM_EXEC_CONTROLS2: 0x%x ", value32);
 
-	/*APIC-v, config APIC-access address*/
-	value64 = vlapic_apicv_get_apic_access_addr();
-	exec_vmwrite64(VMX_APIC_ACCESS_ADDR_FULL, value64);
-
-	/*APIC-v, config APIC virtualized page address*/
-	value64 = vlapic_apicv_get_apic_page_addr(vcpu_vlapic(vcpu));
-	exec_vmwrite64(VMX_VIRTUAL_APIC_PAGE_ADDR_FULL, value64);
-
 	/* Load EPTP execution control
 	 * TODO: introduce API to make this data driven based
 	 * on VMX_EPT_VPID_CAP

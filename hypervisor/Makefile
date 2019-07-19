@@ -295,7 +295,7 @@ BOARDTEMPLATE_ACPI_INFO_HEADER := arch/x86/configs/$(CONFIG_BOARD)/platform_acpi
 SOURCE_ACPI_INFO_HEADER := arch/x86/configs/$(CONFIG_BOARD)/$(CONFIG_BOARD)_acpi_info.h
 TARGET_ACPI_INFO_HEADER := include/platform_acpi_info.h
 
-$(TARGET_ACPI_INFO_HEADER): $(HV_OBJDIR)/$(HV_CONFIG)
+$(TARGET_ACPI_INFO_HEADER):
 ifeq (,$(wildcard $(SOURCE_ACPI_INFO_HEADER)))
 	@echo "******* No ACPI info found *******" && \
 	 echo "Expected ACPI info header at $(SOURCE_ACPI_INFO_HEADER)" && \
@@ -348,7 +348,7 @@ endif
 pre_build: $(PRE_BUILD_OBJS)
 
 .PHONY: header
-header: $(VERSION) $(HV_OBJDIR)/$(HV_CONFIG_H) $(TARGET_ACPI_INFO_HEADER)
+header: $(VERSION) $(TARGET_ACPI_INFO_HEADER)
 
 .PHONY: lib-mod boot-mod hw-mod vp-base-mod vp-dm-mod vp-trusty-mod vp-hcall-mod sys-init-mod
 lib-mod: $(LIB_C_OBJS) $(LIB_S_OBJS)
@@ -430,10 +430,31 @@ $(VERSION):
 -include $(C_OBJS:.o=.d)
 -include $(S_OBJS:.o=.d)
 
-$(HV_OBJDIR)/%.o: %.c $(VERSION) $(HV_OBJDIR)/$(HV_CONFIG_H) $(TARGET_ACPI_INFO_HEADER)
+$(HV_OBJDIR)/%.o: %.c $(VERSION) $(TARGET_ACPI_INFO_HEADER)
 	[ ! -e $@ ] && mkdir -p $(dir $@) && mkdir -p $(HV_MODDIR); \
 	$(CC) $(patsubst %, -I%, $(INCLUDE_PATH)) -I. -c $(CFLAGS) $(ARCH_CFLAGS) $< -o $@ -MMD -MT $@
 
-$(HV_OBJDIR)/%.o: %.S $(HV_OBJDIR)/$(HV_CONFIG_H)
+$(HV_OBJDIR)/%.o: %.S
 	[ ! -e $@ ] && mkdir -p $(dir $@) && mkdir -p $(HV_MODDIR); \
 	$(CC) $(patsubst %, -I%, $(INCLUDE_PATH)) -I. $(ASFLAGS) $(ARCH_ASFLAGS) -c $< -o $@ -MMD -MT $@
+GRUBISO := ./grub_iso
+QEMU	:= qemu-system-x86_64
+
+QEMU_CPU := max,level=21
+QEMUOPTS += -machine q35,kernel_irqchip=split,accel=kvm -cpu $(QEMU_CPU)
+QEMUOPTS += -m 4G -smp cpus=4,cores=4,threads=1 -enable-kvm
+QEMUOPTS += -device isa-debug-exit -device intel-iommu,intremap=on,caching-mode=on,device-iotlb=on
+QEMUOPTS += -debugcon file:/dev/stdout
+QEMUOPTS += -serial mon:stdio -display none
+UT_DIR := ../../acrn-unit-test/
+UT_BINARY := $(UT_DIR)/guest/x86/stitched.raw
+
+.PHONY: qemu
+qemu: $(HV_OBJDIR)/$(HV_FILE).iso
+	$(QEMU) $(QEMUOPTS) -cdrom $(HV_OBJDIR)/$(HV_FILE).iso || true
+
+$(UT_BINARY):
+	make -C $UT_DIR/guest stitched
+
+$(HV_OBJDIR)/$(HV_FILE).iso: all $(UT_BINARY)
+	$(GRUBISO) $(HV_OBJDIR)/$(HV_FILE).iso $<

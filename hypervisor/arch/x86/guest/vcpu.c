@@ -498,7 +498,6 @@ int32_t run_vcpu(struct acrn_vcpu *vcpu)
  */
 void offline_vcpu(struct acrn_vcpu *vcpu)
 {
-	vlapic_free(vcpu);
 	per_cpu(ever_run_vcpu, vcpu->pcpu_id) = NULL;
 	free_pcpu(vcpu->pcpu_id);
 	vcpu->state = VCPU_OFFLINE;

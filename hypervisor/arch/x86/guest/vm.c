@@ -434,15 +434,7 @@ void update_vm_vlapic_state(struct acrn_vm *vm)
 	vcpus_in_xapic = 0U;
 	spinlock_obtain(&vm->vm_lock);
 	foreach_vcpu(i, vm, vcpu) {
-		if (is_x2apic_enabled(vcpu_vlapic(vcpu))) {
-			vcpus_in_x2apic++;
-		} else if (is_xapic_enabled(vcpu_vlapic(vcpu))) {
-			vcpus_in_xapic++;
-		} else {
-			/*
-			 * vCPU is using vLAPIC in Disabled mode
-			 */
-		}
+		vcpus_in_x2apic++;
 	}
 
 	if ((vcpus_in_x2apic == 0U) && (vcpus_in_xapic == 0U)) {

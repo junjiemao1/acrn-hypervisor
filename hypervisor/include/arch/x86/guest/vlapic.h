@@ -101,10 +101,6 @@ int32_t vlapic_x2apic_write(struct acrn_vcpu *vcpu, uint32_t msr, uint64_t val);
 
 uint32_t vlapic_get_apicid(const struct acrn_vlapic *vlapic);
 int32_t vlapic_create(struct acrn_vcpu *vcpu);
-/*
- *  @pre vcpu != NULL
- */
-void vlapic_free(struct acrn_vcpu *vcpu);
 /**
  * @pre vlapic->vm != NULL
  * @pre vlapic->vcpu->vcpu_id < CONFIG_MAX_VCPUS_PER_VM
@@ -112,11 +108,8 @@ void vlapic_free(struct acrn_vcpu *vcpu);
 void vlapic_init(struct acrn_vlapic *vlapic);
 void vlapic_reset(struct acrn_vlapic *vlapic);
 uint64_t vlapic_apicv_get_apic_access_addr(void);
-uint64_t vlapic_apicv_get_apic_page_addr(struct acrn_vlapic *vlapic);
 void vlapic_calc_dest(struct acrn_vm *vm, uint64_t *dmask, bool is_broadcast,
 		uint32_t dest, bool phys, bool lowprio);
-bool is_x2apic_enabled(const struct acrn_vlapic *vlapic);
-bool is_xapic_enabled(const struct acrn_vlapic *vlapic);
 /**
  * @}
  */
