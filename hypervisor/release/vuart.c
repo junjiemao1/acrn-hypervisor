@@ -1,4 +1,5 @@
 /*-
+ * Copyright (c) 2012 NetApp, Inc.
  * Copyright (c) 2013 Neel Natu <neel@freebsd.org>
  * Copyright (c) 2018 Intel Corporation
  * All rights reserved.
@@ -27,19 +28,20 @@
  * $FreeBSD$
  */
 
-#ifndef VUART_H
-#define VUART_H
 #include <types.h>
-#include <spinlock.h>
-#include <vm_config.h>
+#include <pci.h>
+#include <uart16550.h>
+#include <console.h>
+#include <vuart.h>
+#include <vm.h>
+#include <logmsg.h>
 
-#define COM1_BASE		0x3F8U
-#define COM2_BASE		0x2F8U
+void vuart_init(struct acrn_vm *vm, struct vuart_config *vu_config)
+{
 
-#define COM1_IRQ		4U
-#define COM2_IRQ		3U
+}
 
-void vuart_init(struct acrn_vm *vm, struct vuart_config *vu_config);
-void vuart_deinit(struct acrn_vm *vm);
+void vuart_deinit(struct acrn_vm *vm)
+{
 
-#endif /* VUART_H */
+}

@@ -223,7 +223,6 @@ VP_BASE_C_SRCS += arch/x86/configs/$(CONFIG_BOARD)/ve820.c
 VP_DM_C_SRCS += dm/vpic.c
 VP_DM_C_SRCS += dm/vrtc.c
 VP_DM_C_SRCS += dm/vioapic.c
-VP_DM_C_SRCS += dm/vuart.c
 VP_DM_C_SRCS += dm/io_req.c
 VP_DM_C_SRCS += dm/vpci/vdev.c
 VP_DM_C_SRCS += dm/vpci/vpci.c
@@ -437,6 +436,7 @@ $(HV_OBJDIR)/%.o: %.c $(VERSION) $(TARGET_ACPI_INFO_HEADER)
 $(HV_OBJDIR)/%.o: %.S
 	[ ! -e $@ ] && mkdir -p $(dir $@) && mkdir -p $(HV_MODDIR); \
 	$(CC) $(patsubst %, -I%, $(INCLUDE_PATH)) -I. $(ASFLAGS) $(ARCH_ASFLAGS) -c $< -o $@ -MMD -MT $@
+
 GRUBISO := ./grub_iso
 QEMU	:= qemu-system-x86_64
 
@@ -453,8 +453,16 @@ UT_BINARY := $(UT_DIR)/guest/x86/stitched.raw
 qemu: $(HV_OBJDIR)/$(HV_FILE).iso
 	$(QEMU) $(QEMUOPTS) -cdrom $(HV_OBJDIR)/$(HV_FILE).iso || true
 
+.PHONY: qemu-debug
+qemu-debug: $(HV_OBJDIR)/$(HV_FILE).iso
+	$(QEMU) $(QEMUOPTS) -s -S -cdrom $(HV_OBJDIR)/$(HV_FILE).iso || true
+
 $(UT_BINARY):
 	make -C $UT_DIR/guest stitched
 
 $(HV_OBJDIR)/$(HV_FILE).iso: all $(UT_BINARY)
-	$(GRUBISO) $(HV_OBJDIR)/$(HV_FILE).iso $<
+	$(GRUBISO) -d 1 $(HV_OBJDIR)/$(HV_FILE).iso $(HV_OBJDIR)/$(HV_FILE).32.out $(UT_BINARY)
+
+.PHONY: gdb
+gdb:
+	gdb $(HV_OBJDIR)/$(HV_FILE).out -ex "target remote localhost:1234"

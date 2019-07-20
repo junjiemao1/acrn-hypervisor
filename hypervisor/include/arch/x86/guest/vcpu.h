@@ -157,11 +157,19 @@ struct run_context {
 	/** The guests CR registers 0, 2, 3 and 4. */
 	uint64_t cr0;
 
+	/* CPU_CONTEXT_OFFSET_CR2 =
+	*  offsetof(struct run_context, cr2) = 136
+	*/
+	uint64_t cr2;
 	uint64_t cr4;
 
 	uint64_t rip;
 	uint64_t rflags;
 
+	/* CPU_CONTEXT_OFFSET_IA32_SPEC_CTRL =
+	*  offsetof(struct run_context, ia32_spec_ctrl) = 168
+	*/
+	uint64_t ia32_spec_ctrl;
 	uint64_t ia32_efer;
 };
 
