@@ -4,23 +4,18 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-/* This is a template header file for platform ACPI info definition,
- * we should use a user space tool running on target to generate
- * board specific acpi info file named as $(CONFIG_BOARD)_acpi_info.h
- * and put it in hypervisor/arch/x86/configs/$(CONFIG_BOARD)/.
- */
 #ifndef PLATFORM_ACPI_INFO_H
 #define PLATFORM_ACPI_INFO_H
 
 /* DRHD of DMAR */
-#define DRHD_COUNT		0U
+#define DRHD_COUNT		1U
 
-#define DRHD0_DEV_CNT		0U
+#define DRHD0_DEV_CNT		1U
 #define DRHD0_SEGMENT		0U
-#define DRHD0_FLAGS		0U
-#define DRHD0_REG_BASE		0UL
+#define DRHD0_FLAGS		1U
+#define DRHD0_REG_BASE		0xFED90000UL
 #define DRHD0_IGNORE		false
-#define DRHD0_DEVSCOPE0_BUS	0U
+#define DRHD0_DEVSCOPE0_BUS	0xffU
 #define DRHD0_DEVSCOPE0_PATH	0U
 #define DRHD0_DEVSCOPE1_BUS	0U
 #define DRHD0_DEVSCOPE1_PATH	0U

@@ -18,16 +18,8 @@
 #include <vmcs.h>
 
 /* TODO: add more capability per requirement */
-/* APICv features */
-#define VAPIC_FEATURE_VIRT_ACCESS	(1U << 0U)
-#define VAPIC_FEATURE_TPR_SHADOW	(1U << 3U)
-#define VAPIC_FEATURE_VX2APIC_MODE	(1U << 5U)
-
-/* BASIC features: must supported by the physical platform and will enabled by default */
-#define APICV_BASIC_FEATURE	(VAPIC_FEATURE_TPR_SHADOW | VAPIC_FEATURE_VIRT_ACCESS | VAPIC_FEATURE_VX2APIC_MODE)
 
 static struct cpu_capability {
-	uint8_t apicv_features;
 	uint8_t ept_features;
 
 	uint32_t vmx_ept;
@@ -222,11 +214,6 @@ static bool is_ept_supported(void)
 	return (cpu_caps.ept_features != 0U);
 }
 
-static inline bool is_apicv_basic_feature_supported(void)
-{
-	return ((cpu_caps.apicv_features & APICV_BASIC_FEATURE) == APICV_BASIC_FEATURE);
-}
-
 bool pcpu_has_vmx_ept_cap(uint32_t bit_mask)
 {
 	return ((cpu_caps.vmx_ept & bit_mask) != 0U);
@@ -355,9 +342,6 @@ int32_t detect_hardware_support(void)
 		ret = -ENODEV;
 	} else if (!is_ept_supported()) {
 		pr_fatal("%s, EPT not supported\n", __func__);
-		ret = -ENODEV;
-	} else if (!is_apicv_basic_feature_supported()) {
-		pr_fatal("%s, APICV not supported\n", __func__);
 		ret = -ENODEV;
 	} else if (boot_cpu_data.cpuid_level < 0x15U) {
 		pr_fatal("%s, required CPU feature not supported\n", __func__);

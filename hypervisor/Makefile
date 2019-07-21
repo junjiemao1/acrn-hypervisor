@@ -447,7 +447,7 @@ QEMUOPTS += -device isa-debug-exit -device intel-iommu,intremap=on,caching-mode=
 QEMUOPTS += -debugcon file:/dev/stdout
 QEMUOPTS += -serial mon:stdio -display none
 UT_DIR := ../../acrn-unit-test/
-UT_BINARY := $(UT_DIR)/guest/x86/stitched.raw
+UT_BINARY := $(UT_DIR)/guest/x86/stitched.bzimage
 
 .PHONY: qemu
 qemu: $(HV_OBJDIR)/$(HV_FILE).iso
@@ -461,7 +461,7 @@ $(UT_BINARY):
 	make -C $UT_DIR/guest stitched
 
 $(HV_OBJDIR)/$(HV_FILE).iso: all $(UT_BINARY)
-	$(GRUBISO) -d 1 $(HV_OBJDIR)/$(HV_FILE).iso $(HV_OBJDIR)/$(HV_FILE).32.out $(UT_BINARY)
+	$(GRUBISO) -t 1 $(HV_OBJDIR)/$(HV_FILE).iso $(HV_OBJDIR)/$(HV_FILE).32.out $(UT_BINARY)
 
 .PHONY: gdb
 gdb:

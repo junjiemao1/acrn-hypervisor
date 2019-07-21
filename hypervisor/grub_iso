@@ -45,7 +45,7 @@ hvname=acrn.32.out
 			if [ $fname = $hvname ]; then
 				echo    multiboot --quirk-modules-after-kernel /boot/grub/`basename $f`
 			else
-				echo    module /boot/grub/`basename $f`
+				echo    module /boot/grub/`basename $f` Linux_bzImage
 			fi
 		fi
 	done
