@@ -51,17 +51,28 @@ struct lapic_regs {			 /*OFFSET(Hex)*/
 	struct lapic_reg	id;	  /*020*/
 	struct lapic_reg	version;  /*030*/
 	struct lapic_reg	rsv1[4];
+	struct lapic_reg	tpr;	  /*080*/
+	struct lapic_reg	apr;	  /*090*/
 	struct lapic_reg	ppr;	  /*0A0*/
+	struct lapic_reg	eoi;	  /*0B0*/
+	struct lapic_reg	rrd;	  /*0C0*/
 	struct lapic_reg	ldr;	  /*0D0*/
 	struct lapic_reg	dfr;	  /*0EO*/
 	struct lapic_reg	svr;	  /*0F0*/
+	struct lapic_reg	isr[8];   /*100 -- 170*/
 	struct lapic_reg	tmr[8];	  /*180 -- 1F0*/
+	struct lapic_reg	irr[8];	  /*200 -- 270*/
+	struct lapic_reg	esr;	  /*280*/
 	struct lapic_reg	rsv2[6];
 	struct lapic_reg	lvt_cmci; /*2F0*/
+	struct lapic_reg	icr_lo;   /*300*/
+	struct lapic_reg	icr_hi;	  /*310*/
 	struct lapic_reg	lvt[6];	  /*320 -- 370*/
 	struct lapic_reg	icr_timer;/*380*/
+	struct lapic_reg	ccr_timer;/*390*/
 	struct lapic_reg	rsv3[4];
 	struct lapic_reg	dcr_timer;/*3E0*/
+	struct lapic_reg	self_ipi; /*3F0*/
 
 	/*roundup sizeof current struct to 4KB*/
 	struct lapic_reg	rsv5[192]; /*400 -- FF0*/
@@ -122,12 +133,6 @@ union ioapic_rte {
 #define APIC_ID_MASK		0xff000000U
 #define	APIC_ID_SHIFT		24U
 
-#define MAXLVTSHIFT		16U
-
-/* fields in SVR */
-#define APIC_SVR_VECTOR		0x000000ffU
-#define APIC_SVR_ENABLE		0x00000100U
-
 /* fields in ICR_LOW */
 #define APIC_VECTOR_MASK	0x000000ffU
 
@@ -142,27 +147,6 @@ union ioapic_rte {
 
 #define APIC_DEST_MASK		0x000c0000U
 #define APIC_DEST_DESTFLD	0x00000000U
-
-/* fields in LVT1/2 */
-#define APIC_LVT_VECTOR		0x000000ffU
-#define APIC_LVT_DM		0x00000700U
-#define APIC_LVT_DS		0x00001000U
-#define APIC_LVT_IIPP		0x00002000U
-#define APIC_LVT_RIRR		0x00004000U
-#define APIC_LVT_TM		0x00008000U
-#define APIC_LVT_M		0x00010000U
-
-#define APIC_LVTT_TM		0x00060000U
-#define APIC_LVTT_TM_PERIODIC	0x00020000U
-
-/* LVT table indices */
-#define	APIC_LVT_TIMER		0U
-#define	APIC_LVT_THERMAL	1U
-#define	APIC_LVT_PMC		2U
-#define	APIC_LVT_LINT0		3U
-#define	APIC_LVT_LINT1		4U
-#define	APIC_LVT_ERROR		5U
-#define	APIC_LVT_CMCI		6U
 
 /******************************************************************************
  * I/O APIC defines

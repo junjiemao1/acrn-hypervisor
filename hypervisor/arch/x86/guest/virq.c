@@ -387,13 +387,6 @@ int32_t acrn_handle_pending_request(struct acrn_vcpu *vcpu)
 		 * deliver is disabled.
 		 */
 		if (!arch->irq_window_enabled) {
-			if (bitmap_test(ACRN_REQUEST_EXTINT, pending_req_bits) ||
-				vlapic_has_pending_delivery_intr(vcpu)) {
-				tmp = exec_vmread32(VMX_PROC_VM_EXEC_CONTROLS);
-				tmp |= VMX_PROCBASED_CTLS_IRQ_WIN;
-				exec_vmwrite32(VMX_PROC_VM_EXEC_CONTROLS, tmp);
-				arch->irq_window_enabled = true;
-			}
 		}
 	}
 
@@ -411,10 +404,6 @@ static inline bool acrn_inject_pending_intr(struct acrn_vcpu *vcpu,
 	bool guest_irq_enabled = is_guest_irq_enabled(vcpu);
 
 	if (guest_irq_enabled && (!ret)) {
-	}
-
-	if (bitmap_test_and_clear_lock(ACRN_REQUEST_EVENT, pending_req_bits)) {
-		ret = vlapic_inject_intr(vcpu_vlapic(vcpu), guest_irq_enabled, ret);
 	}
 
 	return ret;

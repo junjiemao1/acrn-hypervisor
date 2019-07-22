@@ -46,7 +46,6 @@
 #include <logmsg.h>
 #include "vlapic_priv.h"
 
-#define VLAPIC_VERSION		(16U)
 #define	APICBASE_BSP		0x00000100UL
 #define	APICBASE_X2APIC		0x00000400U
 #define APICBASE_XAPIC		0x00000800U
@@ -56,8 +55,6 @@
 #define CLUSTER_ID_MASK		0xFFFF0U
 
 #define ACRN_DBG_LAPIC		6U
-
-static const struct acrn_apicv_ops *apicv_ops;
 
 static struct acrn_vlapic *
 vm_lapic_from_vcpu_id(struct acrn_vm *vm, uint16_t vcpu_id)
@@ -128,228 +125,6 @@ static inline void vlapic_build_x2apic_id(struct acrn_vlapic *vlapic)
 	logical_id = lapic->id.v & LOGICAL_ID_MASK;
 	cluster_id = (lapic->id.v & CLUSTER_ID_MASK) >> 4U;
 	lapic->ldr.v = (cluster_id << 16U) | (1U << logical_id);
-}
-
-static inline uint32_t
-vlapic_timer_divisor_shift(uint32_t dcr)
-{
-	uint32_t val;
-
-	val = ((dcr & 0x3U) | ((dcr & 0x8U) >> 1U));
-	return ((val + 1U) & 0x7U);
-}
-
-/**
- * @pre vlapic != NULL
- */
-static void vlapic_reset_timer(struct acrn_vlapic *vlapic)
-{
-	struct hv_timer *timer;
-
-	timer = &vlapic->vtimer.timer;
-	timer->mode = TICK_MODE_ONESHOT;
-	timer->fire_tsc = 0UL;
-	timer->period_in_cycle = 0UL;
-}
-
-static void vlapic_update_lvtt(struct acrn_vlapic *vlapic,
-			uint32_t val)
-{
-	uint32_t timer_mode = val & APIC_LVTT_TM;
-	struct vlapic_timer *vtimer = &vlapic->vtimer;
-
-	if (vtimer->mode != timer_mode) {
-		struct hv_timer *timer = &vtimer->timer;
-
-		timer->mode = (timer_mode == APIC_LVTT_TM_PERIODIC) ?
-				TICK_MODE_PERIODIC: TICK_MODE_ONESHOT;
-		timer->fire_tsc = 0UL;
-		timer->period_in_cycle = 0UL;
-
-		vtimer->mode = timer_mode;
-	}
-}
-
-static void vlapic_dcr_write_handler(struct acrn_vlapic *vlapic)
-{
-	uint32_t divisor_shift;
-	struct vlapic_timer *vtimer;
-	struct lapic_regs *lapic = &(vlapic->apic_page);
-
-	vtimer = &vlapic->vtimer;
-	divisor_shift = vlapic_timer_divisor_shift(lapic->dcr_timer.v);
-
-	vtimer->divisor_shift = divisor_shift;
-}
-
-static void
-vlapic_reset_tmr(struct acrn_vlapic *vlapic)
-{
-	int16_t i;
-	struct lapic_regs *lapic;
-
-	dev_dbg(ACRN_DBG_LAPIC,
-			"vlapic resetting all vectors to edge-triggered");
-
-	lapic = &(vlapic->apic_page);
-	for (i = 0; i < 8; i++) {
-		lapic->tmr[i].v = 0U;
-	}
-
-	vcpu_reset_eoi_exit_bitmaps(vlapic->vcpu);
-}
-
-/**
- * @pre offset value shall be one of the folllowing values:
- *	APIC_OFFSET_CMCI_LVT
- *	APIC_OFFSET_TIMER_LVT
- *	APIC_OFFSET_THERM_LVT
- *	APIC_OFFSET_PERF_LVT
- *	APIC_OFFSET_LINT0_LVT
- *	APIC_OFFSET_LINT1_LVT
- *	APIC_OFFSET_ERROR_LVT
- */
-static inline uint32_t
-lvt_off_to_idx(uint32_t offset)
-{
-	uint32_t index;
-
-	switch (offset) {
-	case APIC_OFFSET_CMCI_LVT:
-		index = APIC_LVT_CMCI;
-		break;
-	case APIC_OFFSET_TIMER_LVT:
-		index = APIC_LVT_TIMER;
-		break;
-	case APIC_OFFSET_THERM_LVT:
-		index = APIC_LVT_THERMAL;
-		break;
-	case APIC_OFFSET_PERF_LVT:
-		index = APIC_LVT_PMC;
-		break;
-	case APIC_OFFSET_LINT0_LVT:
-		index = APIC_LVT_LINT0;
-		break;
-	case APIC_OFFSET_LINT1_LVT:
-		index = APIC_LVT_LINT1;
-		break;
-	case APIC_OFFSET_ERROR_LVT:
-	default:
-		/*
-		 * The function caller could guarantee the pre condition.
-		 * So, all of the possible 'offset' other than
-		 * APIC_OFFSET_ERROR_LVT has been handled in prior cases.
-		 */
-		index = APIC_LVT_ERROR;
-		break;
-	}
-
-	return index;
-}
-
-/**
- * @pre offset value shall be one of the folllowing values:
- *	APIC_OFFSET_CMCI_LVT
- *	APIC_OFFSET_TIMER_LVT
- *	APIC_OFFSET_THERM_LVT
- *	APIC_OFFSET_PERF_LVT
- *	APIC_OFFSET_LINT0_LVT
- *	APIC_OFFSET_LINT1_LVT
- *	APIC_OFFSET_ERROR_LVT
- */
-static inline uint32_t *
-vlapic_get_lvtptr(struct acrn_vlapic *vlapic, uint32_t offset)
-{
-	struct lapic_regs *lapic = &(vlapic->apic_page);
-	uint32_t i;
-	uint32_t *lvt_ptr;
-
-	switch (offset) {
-	case APIC_OFFSET_CMCI_LVT:
-		lvt_ptr = &lapic->lvt_cmci.v;
-		break;
-	default:
-		/*
-		 * The function caller could guarantee the pre condition.
-		 * All the possible 'offset' other than APIC_OFFSET_CMCI_LVT
-		 * could be handled here.
-		 */
-		i = lvt_off_to_idx(offset);
-		lvt_ptr = &(lapic->lvt[i].v);
-		break;
-	}
-	return lvt_ptr;
-}
-
-static void
-vlapic_lvt_write_handler(struct acrn_vlapic *vlapic, uint32_t offset)
-{
-	uint32_t *lvtptr, mask, val, idx;
-	struct lapic_regs *lapic;
-	bool error = false;
-
-	lapic = &(vlapic->apic_page);
-	lvtptr = vlapic_get_lvtptr(vlapic, offset);
-	val = *lvtptr;
-
-	if ((lapic->svr.v & APIC_SVR_ENABLE) == 0U) {
-		val |= APIC_LVT_M;
-	}
-	mask = APIC_LVT_M | APIC_LVT_DS | APIC_LVT_VECTOR;
-	switch (offset) {
-	case APIC_OFFSET_TIMER_LVT:
-		mask |= APIC_LVTT_TM;
-		break;
-	case APIC_OFFSET_ERROR_LVT:
-		break;
-	case APIC_OFFSET_LINT0_LVT:
-	case APIC_OFFSET_LINT1_LVT:
-		mask |= APIC_LVT_TM | APIC_LVT_RIRR | APIC_LVT_IIPP;
-		/* FALLTHROUGH */
-	default:
-		mask |= APIC_LVT_DM;
-		break;
-	}
-	val &= mask;
-
-	if (offset == APIC_OFFSET_TIMER_LVT) {
-		vlapic_update_lvtt(vlapic, val);
-	} else {
-		/* No action required. */
-	}
-
-	if (error == false) {
-		*lvtptr = val;
-		idx = lvt_off_to_idx(offset);
-		atomic_store32(&vlapic->lvt_last[idx], val);
-	}
-}
-
-static void
-vlapic_mask_lvts(struct acrn_vlapic *vlapic)
-{
-	struct lapic_regs *lapic = &(vlapic->apic_page);
-
-	lapic->lvt_cmci.v |= APIC_LVT_M;
-	vlapic_lvt_write_handler(vlapic, APIC_OFFSET_CMCI_LVT);
-
-	lapic->lvt[APIC_LVT_TIMER].v |= APIC_LVT_M;
-	vlapic_lvt_write_handler(vlapic, APIC_OFFSET_TIMER_LVT);
-
-	lapic->lvt[APIC_LVT_THERMAL].v |= APIC_LVT_M;
-	vlapic_lvt_write_handler(vlapic, APIC_OFFSET_THERM_LVT);
-
-	lapic->lvt[APIC_LVT_PMC].v |= APIC_LVT_M;
-	vlapic_lvt_write_handler(vlapic, APIC_OFFSET_PERF_LVT);
-
-	lapic->lvt[APIC_LVT_LINT0].v |= APIC_LVT_M;
-	vlapic_lvt_write_handler(vlapic, APIC_OFFSET_LINT0_LVT);
-
-	lapic->lvt[APIC_LVT_LINT1].v |= APIC_LVT_M;
-	vlapic_lvt_write_handler(vlapic, APIC_OFFSET_LINT1_LVT);
-
-	lapic->lvt[APIC_LVT_ERROR].v |= APIC_LVT_M;
-	vlapic_lvt_write_handler(vlapic, APIC_OFFSET_ERROR_LVT);
 }
 
 static inline void set_dest_mask_phys(struct acrn_vm *vm, uint64_t *dmask, uint32_t dest)
@@ -530,28 +305,8 @@ vlapic_reset(struct acrn_vlapic *vlapic)
 
 	lapic = &(vlapic->apic_page);
 	(void)memset((void *)lapic, 0U, sizeof(struct lapic_regs));
-	(void)memset((void *)&(vlapic->pir_desc), 0U, sizeof(vlapic->pir_desc));
 
 	lapic->id.v = vlapic_build_id(vlapic);
-	lapic->version.v = VLAPIC_VERSION;
-	lapic->version.v |= (VLAPIC_MAXLVT_INDEX << MAXLVTSHIFT);
-	lapic->dfr.v = 0xffffffffU;
-	lapic->svr.v = APIC_SVR_VECTOR;
-	vlapic_mask_lvts(vlapic);
-	vlapic_reset_tmr(vlapic);
-
-	lapic->icr_timer.v = 0U;
-	lapic->dcr_timer.v = 0U;
-	vlapic_dcr_write_handler(vlapic);
-	vlapic_reset_timer(vlapic);
-
-	vlapic->svr_last = lapic->svr.v;
-
-	for (i = 0U; i < (VLAPIC_MAXLVT_INDEX + 1U); i++) {
-		vlapic->lvt_last[i] = 0U;
-	}
-
-	vlapic->isrv = 0U;
 }
 
 /**
@@ -726,38 +481,6 @@ int32_t vlapic_create(struct acrn_vcpu *vcpu)
 	vcpu->arch.vlapic.vm = vcpu->vm;
 	vcpu->arch.vlapic.vcpu = vcpu;
 
-	if (is_vcpu_bsp(vcpu)) {
-		uint64_t *pml4_page =
-			(uint64_t *)vcpu->vm->arch_vm.nworld_eptp;
-
-		ept_add_mr(vcpu->vm, pml4_page,
-			vlapic_apicv_get_apic_access_addr(),
-			DEFAULT_APIC_BASE, PAGE_SIZE,
-			EPT_WR | EPT_RD | EPT_UNCACHED);
-	}
-
 	vlapic_init(vcpu_vlapic(vcpu));
 	return 0;
-}
-
-/**
- *APIC-v: Get the HPA to APIC-access page
- * **/
-uint64_t
-vlapic_apicv_get_apic_access_addr(void)
-{
-	/*APIC-v APIC-access address */
-	static uint8_t apicv_apic_access_addr[PAGE_SIZE] __aligned(PAGE_SIZE);
-
-	return hva2hpa(apicv_apic_access_addr);
-}
-
-bool vlapic_inject_intr(struct acrn_vlapic *vlapic, bool guest_irq_enabled, bool injected)
-{
-	return apicv_ops->inject_intr(vlapic, guest_irq_enabled, injected);
-}
-
-bool vlapic_has_pending_delivery_intr(struct acrn_vcpu *vcpu)
-{
-	return apicv_ops->has_pending_delivery_intr(vcpu);
 }

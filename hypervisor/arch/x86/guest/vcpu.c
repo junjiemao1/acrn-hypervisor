@@ -132,17 +132,6 @@ void vcpu_set_vmcs_eoi_exit(struct acrn_vcpu *vcpu)
 
 }
 
-/*
- * Reset all eoi_exit_bitmaps
- */
-void vcpu_reset_eoi_exit_bitmaps(struct acrn_vcpu *vcpu)
-{
-	pr_dbg("%s", __func__);
-
-	(void)memset((void *)(vcpu->arch.eoi_exit_bitmap), 0U, sizeof(vcpu->arch.eoi_exit_bitmap));
-	vcpu_make_request(vcpu, ACRN_REQUEST_EOI_EXIT_BITMAP_UPDATE);
-}
-
 static void set_vcpu_mode(struct acrn_vcpu *vcpu, uint32_t cs_attr, uint64_t ia32_efer,
 		uint64_t cr0)
 {

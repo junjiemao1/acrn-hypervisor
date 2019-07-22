@@ -22,6 +22,12 @@ override RELEASE := n
 endif
 endif
 
+ifeq ($(UT),1)
+SCENARIO_NAME := unit_test
+else
+SCENARIO_NAME := logical_partition
+endif
+
 include include/config.mk
 $(eval $(call override_config,RELEASE,n))
 

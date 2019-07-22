@@ -40,17 +40,6 @@
  * @brief public APIs for virtual LAPIC
  */
 
-#define VLAPIC_MAXLVT_INDEX	APIC_LVT_CMCI
-
-struct vlapic_pir_desc {
-} __aligned(64);
-
-struct vlapic_timer {
-	struct hv_timer timer;
-	uint32_t mode;
-	uint32_t divisor_shift;
-};
-
 struct acrn_vlapic {
 	/*
 	 * Please keep 'apic_page' and 'pir_desc' be the first two fields in
@@ -60,28 +49,12 @@ struct acrn_vlapic {
 	 * - 'pir_desc' MUST be 64 bytes aligned.
 	 */
 	struct lapic_regs	apic_page;
-	struct vlapic_pir_desc	pir_desc;
 
 	struct acrn_vm		*vm;
 	struct acrn_vcpu	*vcpu;
 
-	struct vlapic_timer	vtimer;
-
-	/*
-	 * isrv: vector number for the highest priority bit that is set in the ISR
-	 */
-	uint32_t	isrv;
-
 	uint64_t	msr_apicbase;
 
-	/*
-	 * Copies of some registers in the virtual APIC page. We do this for
-	 * a couple of different reasons:
-	 * - to be able to detect what changed (e.g. svr_last)
-	 * - to maintain a coherent snapshot of the register (e.g. lvt_last)
-	 */
-	uint32_t	svr_last;
-	uint32_t	lvt_last[VLAPIC_MAXLVT_INDEX + 1];
 } __aligned(PAGE_SIZE);
 
 /**
@@ -90,9 +63,6 @@ struct acrn_vlapic {
  * @addtogroup acrn_vlapic ACRN vLAPIC
  * @{
  */
-
-bool vlapic_inject_intr(struct acrn_vlapic *vlapic, bool guest_irq_enabled, bool injected);
-bool vlapic_has_pending_delivery_intr(struct acrn_vcpu *vcpu);
 
 uint64_t vlapic_get_apicbase(const struct acrn_vlapic *vlapic);
 int32_t vlapic_set_apicbase(struct acrn_vlapic *vlapic, uint64_t new);
@@ -107,7 +77,6 @@ int32_t vlapic_create(struct acrn_vcpu *vcpu);
  */
 void vlapic_init(struct acrn_vlapic *vlapic);
 void vlapic_reset(struct acrn_vlapic *vlapic);
-uint64_t vlapic_apicv_get_apic_access_addr(void);
 void vlapic_calc_dest(struct acrn_vm *vm, uint64_t *dmask, bool is_broadcast,
 		uint32_t dest, bool phys, bool lowprio);
 /**

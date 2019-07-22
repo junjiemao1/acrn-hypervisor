@@ -54,16 +54,6 @@
 #define ACRN_REQUEST_EXCP			0U
 
 /**
- * @brief Request for vLAPIC event
- */
-#define ACRN_REQUEST_EVENT			1U
-
-/**
- * @brief Request for external interrupt from vPIC
- */
-#define ACRN_REQUEST_EXTINT			2U
-
-/**
  * @brief Request for non-maskable interrupt
  */
 #define ACRN_REQUEST_NMI			3U
@@ -203,8 +193,6 @@ struct ext_context {
 #define NUM_COMMON_MSRS		15U
 #define NUM_GUEST_MSRS		(NUM_WORLD_MSRS + NUM_COMMON_MSRS)
 
-#define EOI_EXIT_BITMAP_SIZE	256U
-
 struct event_injection_info {
 	uint32_t intr_info;
 	uint32_t error_code;
@@ -280,8 +268,6 @@ struct acrn_vcpu_arch {
 	/* List of MSRS to be stored and loaded on VM exits or VM entries */
 	struct msr_store_area msr_area;
 
-	/* EOI_EXIT_BITMAP buffer, for the bitmap update */
-	uint64_t eoi_exit_bitmap[EOI_EXIT_BITMAP_SIZE >> 6U];
 } __aligned(PAGE_SIZE);
 
 struct acrn_vm;
@@ -479,8 +465,6 @@ void vcpu_set_vmcs_eoi_exit(struct acrn_vcpu *vcpu);
  *
  * @return None
  */
-
-void vcpu_reset_eoi_exit_bitmaps(struct acrn_vcpu *vcpu);
 
 /**
  * @brief set all the vcpu registers

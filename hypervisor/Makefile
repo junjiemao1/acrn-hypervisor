@@ -47,15 +47,6 @@ default: all
 include scripts/kconfig/kconfig.mk
 
 #initialize scenarios name
-ifeq ($(CONFIG_SDC),y)
-SCENARIO_NAME := sdc
-else ifeq ($(CONFIG_LOGICAL_PARTITION),y)
-SCENARIO_NAME := logical_partition
-else ifeq ($(CONFIG_INDUSTRY),y)
-SCENARIO_NAME := industry
-else ifeq ($(CONFIG_HYBRID),y)
-SCENARIO_NAME := hybrid
-endif
 
 BASH = $(shell which bash)
 
@@ -68,6 +59,7 @@ CFLAGS += -fsigned-char
 CFLAGS += -m64 -mno-mmx -mno-sse -mno-sse2 -mno-80387 -mno-fp-ret-in-387
 CFLAGS += -mno-red-zone
 CFLAGS += -nostdinc -nostdlib -fno-common
+CFLAGS +=
 ifeq (y, $(CONFIG_RELOC))
 CFLAGS += -fpie
 else

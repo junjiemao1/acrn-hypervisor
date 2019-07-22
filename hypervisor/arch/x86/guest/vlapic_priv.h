@@ -35,17 +35,5 @@
  */
 #define APIC_OFFSET_ID		0x20U	/* Local APIC ID		*/
 #define APIC_OFFSET_LDR		0xD0U	/* Logical Destination		*/
-#define APIC_OFFSET_CMCI_LVT	0x2F0U	/* Local Vector Table (CMCI)	*/
-#define APIC_OFFSET_TIMER_LVT	0x320U	/* Local Vector Table (Timer)	*/
-#define APIC_OFFSET_THERM_LVT	0x330U	/* Local Vector Table (Thermal)	*/
-#define APIC_OFFSET_PERF_LVT	0x340U	/* Local Vector Table (PMC)	*/
-#define APIC_OFFSET_LINT0_LVT	0x350U	/* Local Vector Table (LINT0)	*/
-#define APIC_OFFSET_LINT1_LVT	0x360U	/* Local Vector Table (LINT1)	*/
-#define APIC_OFFSET_ERROR_LVT	0x370U	/* Local Vector Table (ERROR)	*/
-
-struct acrn_apicv_ops {
-	bool (*inject_intr)(struct acrn_vlapic *vlapic, bool guest_irq_enabled, bool injected);
-	bool (*has_pending_delivery_intr)(struct acrn_vcpu *vcpu);
-};
 
 #endif /* VLAPIC_PRIV_H */
