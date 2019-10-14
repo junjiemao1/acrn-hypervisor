@@ -26,12 +26,13 @@ QEMUOPTS += -m 4G -smp cpus=8,cores=4,threads=2 -enable-kvm
 QEMUOPTS += -device isa-debug-exit -device intel-iommu,intremap=on,caching-mode=on,device-iotlb=on
 QEMUOPTS += -debugcon file:/dev/stdout
 QEMUOPTS += -serial mon:stdio -display none
-QEMUOPTS += -drive file=$(LINUX_ROOTFS_IMAGE),index=0,format=qcow2,id=rootfs,if=none
+
+ifndef UT
+QEMUOPTS += -drive file=$(LINUX_ROOTFS_IMAGE),index=0,format=raw,id=rootfs,if=none
 QEMUOPTS += -device nec-usb-xhci,id=xhci
 QEMUOPTS += -device usb-storage,bus=xhci.0,drive=rootfs
 QEMUOPTS += -nic tap,model=e1000,script=no,downscript=no,ifname=zeth
 
-ifndef UT
 $(HV_OBJDIR)/$(HV_FILE).iso: all $(ZEPHYR_BINARY) $(LINUX_BZIMAGE_BINARY)
 	$(GRUBISO) -t 1 $(HV_OBJDIR)/$(HV_FILE).iso $(HV_OBJDIR)/$(HV_FILE).32.out \
 		$(ZEPHYR_BINARY):zephyr \
