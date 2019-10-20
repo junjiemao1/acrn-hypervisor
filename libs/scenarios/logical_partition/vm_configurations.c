@@ -46,7 +46,7 @@ struct acrn_vm_config vm_configs[CONFIG_MAX_VM_NUM] = {
 		.uuid = {0xddU, 0x87U, 0xceU, 0x08U, 0x66U, 0xf9U, 0x47U, 0x3dU,	\
 			 0xbcU, 0x58U, 0x76U, 0x05U, 0x83U, 0x7fU, 0x93U, 0x5eU},
 			/* dd87ce08-66f9-473d-bc58-7605837f935e */
-		.vcpu_num = 3U,
+		.vcpu_num = 1U,
 		.vcpu_affinity = VM1_CONFIG_VCPU_AFFINITY,
 		.memory = {
 			.start_hpa = VM1_CONFIG_MEM_START_HPA,
