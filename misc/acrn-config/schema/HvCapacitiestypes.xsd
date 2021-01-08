@@ -1,0 +1,39 @@
+<?xml version="1.0"?>
+<xs:schema xml:id="root" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+<xs:simpleType name="MaxIoapicNumType">
+  <xs:restriction base="xs:integer">
+    <xs:minInclusive value="1" />
+    <xs:maxInclusive value="10" />
+  </xs:restriction>
+</xs:simpleType>
+
+<xs:simpleType name="MaxPciDevNumType">
+  <xs:restriction base="xs:integer">
+    <xs:minInclusive value="1" />
+    <xs:maxInclusive value="1024" />
+  </xs:restriction>
+</xs:simpleType>
+
+<xs:simpleType name="MaxIoapicLinesType">
+  <xs:restriction base="xs:integer">
+    <xs:minInclusive value="1" />
+    <xs:maxInclusive value="120" />
+  </xs:restriction>
+</xs:simpleType>
+
+<xs:simpleType name="MaxMsixTableNumType">
+  <xs:restriction base="xs:integer">
+    <xs:minInclusive value="1" />
+    <xs:maxInclusive value="2048" />
+  </xs:restriction>
+</xs:simpleType>
+
+<xs:simpleType name="MaxEmulatedMmioType">
+  <xs:restriction base="xs:integer">
+    <xs:minInclusive value="1" />
+    <xs:maxInclusive value="128" />
+  </xs:restriction>
+</xs:simpleType>
+
+</xs:schema>

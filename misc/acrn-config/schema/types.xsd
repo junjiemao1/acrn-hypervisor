@@ -1,0 +1,93 @@
+<?xml version="1.0"?>
+<xs:schema xml:id="root" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+<xs:simpleType name="Boolean">
+  <xs:restriction base="xs:string">
+    <xs:enumeration value="y" />
+    <xs:enumeration value="n" />
+  </xs:restriction>
+</xs:simpleType>
+
+<xs:simpleType name="HexFormat">
+  <xs:restriction base="xs:string">
+    <xs:pattern value="0x[0-9A-Fa-f]+|[0-9]+|0X[0-9A-Fa-f]+|[0-9]+" />
+  </xs:restriction>
+</xs:simpleType>
+
+<xs:simpleType name="None">
+  <xs:restriction base="xs:string">
+    <xs:pattern value="[*]{0}" />
+  </xs:restriction>
+</xs:simpleType>
+
+<xs:simpleType name="HvRamSizeType">
+  <xs:union memberTypes="None HexFormat" />
+</xs:simpleType>
+
+<xs:simpleType name="HvRamStartType">
+  <xs:union memberTypes="None HexFormat" />
+</xs:simpleType>
+
+<xs:simpleType name="SosRamSize">
+  <xs:restriction base="xs:string">
+    <xs:enumeration value="CONFIG_SOS_RAM_SIZE" />
+  </xs:restriction>
+</xs:simpleType>
+
+<xs:simpleType name="MemorySizeType">
+  <xs:union memberTypes="SosRamSize HexFormat" />
+</xs:simpleType>
+
+<xs:simpleType name="LogLevelType">
+  <xs:restriction base="xs:integer">
+    <xs:minInclusive value="0" />
+    <xs:maxInclusive value="7" />
+  </xs:restriction>
+</xs:simpleType>
+
+<xs:simpleType name="SchedulerType">
+  <xs:restriction base="xs:string">
+    <xs:enumeration value="SCHED_NOOP" />
+    <xs:enumeration value="SCHED_IORR" />
+    <xs:enumeration value="SCHED_BVT" />
+  </xs:restriction>
+</xs:simpleType>
+
+<xs:simpleType name="SerialConsoleType">
+  <xs:restriction base="xs:string">
+    <xs:pattern value=".*ttyS[0-3]" />
+  </xs:restriction>
+</xs:simpleType>
+
+<xs:simpleType name="SerialConsoleOptions">
+  <xs:union memberTypes="None SerialConsoleType" />
+</xs:simpleType>
+
+<xs:simpleType name="IvshmemRegionPattern">
+  <xs:restriction base="xs:string">
+    <xs:pattern value="(([a-z+A-Z]+):\/([a-zA-Z0-9_]+)\s?,\s?([0-9]+)\s?,\s?([0-9])\s?:\s?([0-9])\s?)" />
+  </xs:restriction>
+</xs:simpleType>
+
+<xs:simpleType name="IvshmemRegionType">
+  <xs:union memberTypes="None IvshmemRegionPattern" />
+
+</xs:simpleType>
+
+<xs:complexType name="IvshmemInfo">
+  <xs:sequence>
+<xs:element name="IVSHMEM_ENABLED" type="Boolean"/>
+<xs:element name="IVSHMEM_REGION" type="IvshmemRegionType"/>
+  </xs:sequence>
+</xs:complexType>
+
+<xs:complexType name="RdtType">
+  <xs:sequence>
+<xs:element name="RDT_ENABLED" type="Boolean"/>
+<xs:element name="CDP_ENABLED" type="Boolean"/>
+<xs:element name="CLOS_MASK" type="xs:string" maxOccurs="unbounded" />
+<xs:element name="MBA_DELAY" type="xs:string" minOccurs="0" />
+  </xs:sequence>
+</xs:complexType>
+
+</xs:schema>
