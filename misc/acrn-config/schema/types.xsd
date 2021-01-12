@@ -2,6 +2,9 @@
 <xs:schema xml:id="root" xmlns:xs="http://www.w3.org/2001/XMLSchema">
 
 <xs:simpleType name="Boolean">
+  <xs:annotation>
+    <xs:documentation>A boolean value, written as ``y`` or ``n``.</xs:documentation>
+  </xs:annotation>
   <xs:restriction base="xs:string">
     <xs:enumeration value="y" />
     <xs:enumeration value="n" />
@@ -9,6 +12,10 @@
 </xs:simpleType>
 
 <xs:simpleType name="HexFormat">
+  <xs:annotation>
+    <xs:documentation>A hexadecimal value, optionally beginning ``0x``.
+    </xs:documentation>
+  </xs:annotation>
   <xs:restriction base="xs:string">
     <xs:pattern value="0x[0-9A-Fa-f]+|[0-9]+|0X[0-9A-Fa-f]+|[0-9]+" />
   </xs:restriction>
@@ -21,10 +28,16 @@
 </xs:simpleType>
 
 <xs:simpleType name="HvRamSizeType">
+  <xs:annotation>
+    <xs:documentation>Either empty, or a hexadecimal value.</xs:documentation>
+  </xs:annotation>
   <xs:union memberTypes="None HexFormat" />
 </xs:simpleType>
 
 <xs:simpleType name="HvRamStartType">
+  <xs:annotation>
+    <xs:documentation>Either empty, or a hexadecimal value.</xs:documentation>
+  </xs:annotation>
   <xs:union memberTypes="None HexFormat" />
 </xs:simpleType>
 
@@ -35,10 +48,19 @@
 </xs:simpleType>
 
 <xs:simpleType name="MemorySizeType">
+  <xs:annotation>
+    <xs:documentation>Either a hexadecimal value or the string
+      ``CONFIG_SOS_RAM_SIZE`` indicating use of the Kconfig
+      :option:`CONFIG_SOS_RAM_SIZE` value.
+   </xs:documentation>
+  </xs:annotation>
   <xs:union memberTypes="SosRamSize HexFormat" />
 </xs:simpleType>
 
 <xs:simpleType name="LogLevelType">
+  <xs:annotation>
+    <xs:documentation>An integer from 0-7.</xs:documentation>
+  </xs:annotation>
   <xs:restriction base="xs:integer">
     <xs:minInclusive value="0" />
     <xs:maxInclusive value="7" />
@@ -46,6 +68,10 @@
 </xs:simpleType>
 
 <xs:simpleType name="SchedulerType">
+  <xs:annotation>
+    <xs:documentation>Either ``SCHED_NOOP``, ``SCHED_IORR``, or ``SCHED_BVT``.
+     Read about the available scheduling options in :ref:`cpu_sharing`.</xs:documentation>
+  </xs:annotation>
   <xs:restriction base="xs:string">
     <xs:enumeration value="SCHED_NOOP" />
     <xs:enumeration value="SCHED_IORR" />

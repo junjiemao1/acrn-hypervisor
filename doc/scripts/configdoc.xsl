@@ -46,7 +46,7 @@
        <xsl:if test="$level &lt;= 4">
          <xsl:call-template name="section-header">
            <xsl:with-param name="title" select="concat($prefix, @name)" />
-           <xsl:with-param name="label" select="$ty" />
+           <xsl:with-param name="label" select="concat($prefix, @name)" />
            <xsl:with-param name="level" select="$level" />
          </xsl:call-template>
 

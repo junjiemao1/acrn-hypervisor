@@ -15,14 +15,21 @@
   <xs:all>
     <xs:element name="RELEASE" type="Boolean">
       <xs:annotation>
-	<xs:documentation>Set this to true in order to build an image for production.</xs:documentation>
+	<xs:documentation>Build an image for release (``y``) or debug (``n``).
+          *We should put some information here about the differences
+          between a release and debug version.*
+        </xs:documentation>
       </xs:annotation>
     </xs:element>
     <xs:element name="SERIAL_CONSOLE" type="SerialConsoleOptions">
       <xs:annotation>
 	<xs:documentation>
-	  Specify the console tty which is used by SOS legacy vuart 0.
-	  Leave this field empty if SOS console_vuart is enabled. Using bootargs for console_vuart configuration.
+	  Specify the host serial device used for hypervisor debugging.
+          This option is only valid if the Service VM :ref:`vm.legacy_vuart` is
+          enabled. Leave :option:`hv.DEBUG_OPTIONS.SERIAL_CONSOLE` empty if the Service VM
+          :ref:`vm.console_vuart` is enabled. Uses
+          :option:`vm.board_private.bootargs` for the :ref:`vm.console_vuart`
+          configuration.
 	</xs:documentation>
       </xs:annotation>
     </xs:element>
@@ -43,12 +50,19 @@
     </xs:element>
     <xs:element name="LOG_DESTINATION" type="LogLevelType">
       <xs:annotation>
-	<xs:documentation>Bitmap of consoles where logs are printed.</xs:documentation>
+	<xs:documentation>Bitmap indicating the destination of log messages.
+          Currently there are three log destinations available: bit 0 for
+          the serial console, bit 1 for the Service VM log, and bit 2
+          for the NPK log. For example, a value of ``3`` enables just the
+          serial console and Service VM logs. Effective only in debug builds (when
+          :option:`hv.DEBUG_OPTIONS.RELEASE` is ``n``).
+        </xs:documentation>
       </xs:annotation>
     </xs:element>
     <xs:element name="LOG_BUF_SIZE" type="HexFormat">
       <xs:annotation>
-	<xs:documentation>Capacity of logbuf for each physical cpu.</xs:documentation>
+	<xs:documentation>Capacity (in bytes) of logbuf for each
+          physical cpu, for example, ``0x40000``.</xs:documentation>
       </xs:annotation>
     </xs:element>
   </xs:all>
