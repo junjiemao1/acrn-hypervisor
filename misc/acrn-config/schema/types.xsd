@@ -40,6 +40,13 @@
   <xs:union memberTypes="None HexFormat" />
 </xs:simpleType>
 
+<xs:simpleType name="MaxMsixTableSizeType">
+  <xs:annotation>
+    <xs:documentation>Either empty, or an integer value between 1 and 2048.</xs:documentation>
+  </xs:annotation>
+  <xs:union memberTypes="None MaxMsixTableNumType" />
+</xs:simpleType>
+
 <xs:simpleType name="SosRamSize">
   <xs:restriction base="xs:string">
     <xs:enumeration value="CONFIG_SOS_RAM_SIZE" />
@@ -163,7 +170,7 @@ size, and VM IDs that may communicate using this shared region:
         <xs:documentation>Description missing.</xs:documentation>
       </xs:annotation>
     </xs:element>
-    <xs:element name="CLOS_MASK" type="xs:string" maxOccurs="unbounded">
+    <xs:element name="CLOS_MASK" type="xs:string"  minOccurs="0" maxOccurs="unbounded">
       <xs:annotation>
         <xs:documentation>Description missing.</xs:documentation>
       </xs:annotation>
@@ -173,6 +180,12 @@ size, and VM IDs that may communicate using this shared region:
         <xs:documentation>Description missing.</xs:documentation>
       </xs:annotation>
     </xs:element>
+  </xs:sequence>
+</xs:complexType>
+
+<xs:complexType name="PsramInfo">
+  <xs:sequence>
+<xs:element name="PSRAM_ENABLED" type="Boolean"/>
   </xs:sequence>
 </xs:complexType>
 
