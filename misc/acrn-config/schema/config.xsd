@@ -130,7 +130,7 @@ Machine Check Error on Page Size Change.</xs:documentation>
         <xs:documentation>Enable Inter-VM Shared memory feature.</xs:documentation>
       </xs:annotation>
     </xs:element>
-    <xs:element name="PSRAM" minOccurs="0" type="Boolean">
+    <xs:element name="PSRAM" minOccurs="0" type="PsramInfo">
       <xs:annotation>
         <xs:documentation>Description missing</xs:documentation>
       </xs:annotation>
@@ -223,7 +223,7 @@ maximum supported resource.</xs:documentation>
         <xs:documentation>Maximum number of interrupt source for PT devices.</xs:documentation>
       </xs:annotation>
     </xs:element>
-    <xs:element name="MAX_MSIX_TABLE_NUM" type="MaxMsixTableNumType">
+    <xs:element name="MAX_MSIX_TABLE_NUM" type="MaxMsixTableSizeType">
       <xs:annotation>
         <xs:documentation>Maximum number of MSI-X tables per device.
 Leave blank if not sure.</xs:documentation>
@@ -322,6 +322,11 @@ Refer SDM 17.19.2 for details, and use with caution.</xs:documentation>
       </xs:annotation>
     </xs:element>
     <xs:element name="mmio_resources" type="MmioResourcesConfiguration" minOccurs="0">
+      <xs:annotation>
+        <xs:documentation>Description missing</xs:documentation>
+      </xs:annotation>
+    </xs:element>
+    <xs:element name="pci_dev_num" minOccurs="0">
       <xs:annotation>
         <xs:documentation>Description missing</xs:documentation>
       </xs:annotation>
