@@ -1,5 +1,7 @@
 <?xml version="1.0"?>
-<xs:schema xml:id="root" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+<xs:schema xml:id="root"
+	   xmlns:xs="http://www.w3.org/2001/XMLSchema"
+	   xmlns:acrn="http://projectacrn.github.io">
 
 <xs:simpleType name="VmOptionsType">
   <xs:annotation>
@@ -74,13 +76,16 @@
 </xs:complexType>
 
 <xs:complexType name="EpcSection">
+  <xs:annotation acrn:configurable="n">
+    <xs:documentation>epc section.</xs:documentation>
+  </xs:annotation>
   <xs:sequence>
-    <xs:element name="base" type="xs:integer">
+    <xs:element name="base" type="xs:integer" default="0">
       <xs:annotation>
         <xs:documentation>Description missing.</xs:documentation>
       </xs:annotation>
     </xs:element>
-    <xs:element name="size" type="xs:integer">
+    <xs:element name="size" type="xs:integer" default="0">
       <xs:annotation>
         <xs:documentation>Description missing.</xs:documentation>
       </xs:annotation>
@@ -101,13 +106,13 @@
       </xs:annotation>
     </xs:element>
     <xs:element name="start_hpa2" type="HexFormat" minOccurs="0">
-      <xs:annotation>
-        <xs:documentation>Description missing.</xs:documentation>
+      <xs:annotation acrn:configurable="n">
+        <xs:documentation>Start of second HPA for non-contiguous allocations in host for the VM.</xs:documentation>
       </xs:annotation>
     </xs:element>
     <xs:element name="size_hpa2" type="MemorySizeType" minOccurs="0">
-      <xs:annotation>
-        <xs:documentation>Description missing.</xs:documentation>
+      <xs:annotation acrn:configurable="n">
+        <xs:documentation>Memory size of second HPA for non-contiguous allocations in Bytes for the VM.</xs:documentation>
       </xs:annotation>
     </xs:element>
   </xs:sequence>
@@ -136,8 +141,8 @@
       </xs:annotation>
     </xs:element>
     <xs:element name="bootargs" type="xs:string">
-      <xs:annotation>
-        <xs:documentation>Description missing.</xs:documentation>
+      <xs:annotation acrn:configurable="../../vm_type[starts-with(text(), 'PRE')]">
+        <xs:documentation>Configurable boot argument for pre-launched VM of hybrid or hybrid_rt mode.</xs:documentation>
       </xs:annotation>
     </xs:element>
     <xs:element name="kern_load_addr" type="xs:string" minOccurs="0">
@@ -164,18 +169,18 @@
 </xs:simpleType>
 
 <xs:simpleType name="LegacyVuartType">
-  <xs:annotation>
-    <xs:documentation>Description missing.</xs:documentation>
+  <xs:annotation acrn:configurable="n">
+    <xs:documentation>vCOM type</xs:documentation>
   </xs:annotation>
   <xs:restriction base="xs:string">
     <xs:enumeration value="VUART_LEGACY_PIO" />
-    <xs:enumeration value=" VUART_PCI" />
+    <xs:enumeration value="VUART_PCI" />
   </xs:restriction>
 </xs:simpleType>
 
 <xs:simpleType name="LegacyVuartBase">
   <xs:annotation>
-    <xs:documentation>Description missing.</xs:documentation>
+    <xs:documentation>vUART (A.K.A COM) enabling switch. Enable by exposing its base address, disable by returning INVALID_COM_BASE.</xs:documentation>
   </xs:annotation>
   <xs:restriction base="xs:string">
     <xs:enumeration value="SOS_COM1_BASE" />
@@ -189,8 +194,8 @@
 </xs:simpleType>
 
 <xs:simpleType name="LegacyVuartIrq">
-  <xs:annotation>
-    <xs:documentation>Description missing.</xs:documentation>
+  <xs:annotation acrn:configurable="n">
+    <xs:documentation>vCOM irq</xs:documentation>
   </xs:annotation>
   <xs:restriction base="xs:string">
     <xs:enumeration value="SOS_COM1_IRQ" />
