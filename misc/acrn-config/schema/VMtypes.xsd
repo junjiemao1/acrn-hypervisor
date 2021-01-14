@@ -53,6 +53,7 @@
       </xs:annotation>
     </xs:element>
   </xs:sequence>
+  <xs:assert test="count(guest_flag) eq count(distinct-values(guest_flag))"/>
 </xs:complexType>
 
 <xs:complexType name="CpuAffinityConfiguration">
