@@ -13,8 +13,7 @@
 
 <xs:simpleType name="HexFormat">
   <xs:annotation>
-    <xs:documentation>A hexadecimal value, optionally beginning ``0x``.
-    </xs:documentation>
+    <xs:documentation>A hexadecimal value.</xs:documentation>
   </xs:annotation>
   <xs:restriction base="xs:string">
     <xs:pattern value="0x[0-9A-Fa-f]+|[0-9]+|0X[0-9A-Fa-f]+|[0-9]+" />
@@ -50,9 +49,8 @@
 <xs:simpleType name="MemorySizeType">
   <xs:annotation>
     <xs:documentation>Either a hexadecimal value or the string
-      ``CONFIG_SOS_RAM_SIZE`` indicating use of the Kconfig
-      :option:`CONFIG_SOS_RAM_SIZE` value.
-   </xs:documentation>
+``CONFIG_SOS_RAM_SIZE`` indicating use of the Kconfig
+:option:`CONFIG_SOS_RAM_SIZE` value.</xs:documentation>
   </xs:annotation>
   <xs:union memberTypes="SosRamSize HexFormat" />
 </xs:simpleType>
@@ -69,8 +67,20 @@
 
 <xs:simpleType name="SchedulerType">
   <xs:annotation>
-    <xs:documentation>Either ``SCHED_NOOP``, ``SCHED_IORR``, or ``SCHED_BVT``.
-     Read about the available scheduling options in :ref:`cpu_sharing`.</xs:documentation>
+    <xs:documentation>Three scheduler options are supported:
+
+- ``SCHED_NOOP``: The NOOP (No-Operation) scheduler means there is a
+  strict 1 to 1 mapping between vCPUs and pCPUs.
+- ``SCHED_IORR``: The IORR (IO sensitive Round Robin) scheduler supports
+  multipule vCPUs running on on one pCPU, scheduled by
+  a IO sensitive round robin policy.
+- ``SCHED_BVT``: The BVT (Borrowed Virtual time) scheduler is a virtual time based
+  scheduling algorithm, it dispatchs the runnable thread with the
+  earliest effective virtual time. *TODO: BVT scheduler will be built on
+  top of a prioritized scheduling mechanism, i.e. higher priority threads
+  get scheduled first, and same priority tasks are scheduled per BVT.*
+
+Read more about the available scheduling options in :ref:`cpu_sharing`.</xs:documentation>
   </xs:annotation>
   <xs:restriction base="xs:string">
     <xs:enumeration value="SCHED_NOOP" />
@@ -86,6 +96,9 @@
 </xs:simpleType>
 
 <xs:simpleType name="SerialConsoleOptions">
+  <xs:annotation>
+    <xs:documentation>Either empty or a string.</xs:documentation>
+  </xs:annotation>
   <xs:union memberTypes="None SerialConsoleType" />
 </xs:simpleType>
 
@@ -96,14 +109,34 @@
 </xs:simpleType>
 
 <xs:simpleType name="IvshmemRegionType">
+  <xs:annotation>
+    <xs:documentation>Either empty or a string.</xs:documentation>
+  </xs:annotation>
   <xs:union memberTypes="None IvshmemRegionPattern" />
 
 </xs:simpleType>
 
 <xs:complexType name="IvshmemInfo">
   <xs:sequence>
-<xs:element name="IVSHMEM_ENABLED" type="Boolean"/>
-<xs:element name="IVSHMEM_REGION" type="IvshmemRegionType"/>
+   <xs:element name="IVSHMEM_ENABLED" type="Boolean">
+     <xs:annotation>
+       <xs:documentation>Enable inter-VM shared memory feature.</xs:documentation>
+     </xs:annotation>
+   </xs:element>
+   <xs:element name="IVSHMEM_REGION" type="IvshmemRegionType">
+     <xs:annotation>
+       <xs:documentation>A comma-separated list with the inter-VM shared memory region name,
+size, and VM IDs that may communicate using this shared region:
+
+* Prefix the region ``name`` with ``hv:/`` (for an hv-land solution).
+  (See :ref:`ivshmem-hld` for details.)
+* Specify the region ``size`` in MB.  Must be a power of 2, e.g., 2, 4,
+  8, 16, up to 512.
+* Specify all VM IDs that may use this shared memory area,
+  separated by a ``:``. For example, use ``0:2`` to share this area between
+  VMs 0 and 2, or ``0:1:2`` (to let VMs 0, 1, and 2 share this area).</xs:documentation>
+     </xs:annotation>
+   </xs:element>
   </xs:sequence>
 </xs:complexType>
 

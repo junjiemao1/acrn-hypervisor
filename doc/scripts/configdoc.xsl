@@ -51,7 +51,9 @@
          </xsl:call-template>
 
          <!-- Description of this menu / entry -->
-         <xsl:call-template name="print-annotation" />
+         <xsl:call-template name="print-annotation" >
+            <xsl:with-param name="indent" select="''" />
+         </xsl:call-template>
          <xsl:value-of select="$newline" />
          <!-- Occurence requirements -->
          <xsl:call-template name="print-occurs">
@@ -73,7 +75,9 @@
        <xsl:value-of select="$newline" />
        <!-- Print the description, type, and occurrence requirements -->
        <xsl:text>   - </xsl:text>
-       <xsl:call-template name="print-annotation" />
+       <xsl:call-template name="print-annotation" >
+          <xsl:with-param name="indent" select="'     '" />
+       </xsl:call-template>
        <xsl:choose>
          <xsl:when test="//xs:simpleType[@name=$ty]">
            <xsl:apply-templates select="//xs:simpleType[@name=$ty]" />
@@ -111,7 +115,9 @@
 
   <xsl:template match="xs:simpleType">
     <xsl:text>   - </xsl:text>
-    <xsl:call-template name="print-annotation" />
+    <xsl:call-template name="print-annotation" >
+       <xsl:with-param name="indent" select="'     '" />
+    </xsl:call-template>
   </xsl:template>
 
   <xsl:template name="print-occurs">
@@ -167,9 +173,14 @@
   </xsl:template>
 
   <xsl:template name="print-annotation">
+    <xsl:param name="indent" />
     <xsl:choose>
       <xsl:when test="xs:annotation">
-        <xsl:apply-templates select="xs:annotation" />
+<!--        <xsl:apply-templates select="xs:annotation" /> -->
+         <xsl:call-template name="printIndented">
+           <xsl:with-param name="text" select="xs:annotation/xs:documentation" />
+           <xsl:with-param name="indent" select="$indent" />
+         </xsl:call-template>
       </xsl:when>
       <xsl:otherwise>
         <xsl:text>&lt;description is missing &gt;</xsl:text>
@@ -179,7 +190,8 @@
   </xsl:template>
 
   <xsl:template match="xs:annotation">
-    <xsl:value-of select="concat(normalize-space(xs:documentation), $newline)" />
+<!--    <xsl:value-of select="concat(normalize-space(xs:documentation), $newline)" /> -->
+    <xsl:value-of select="concat(xs:documentation, $newline)" />
   </xsl:template>
 
   <!--
@@ -223,4 +235,29 @@
     <xsl:value-of select="$newline" />
   </xsl:template>
 
+<xsl:template name="printIndented">
+  <xsl:param name="text" />
+  <xsl:param name="indent" />
+  <xsl:if test="$text">
+    <xsl:variable name="thisLine" select="substring-before($text, $newline)" />
+    <xsl:variable name="nextLine" select="substring-after($text, $newline)" />
+    <xsl:choose>
+      <xsl:when test="$thisLine or $nextLine"><!-- $text contains at least one newline -->
+        <!-- print this line -->
+        <xsl:value-of select="concat($thisLine, $newline)" />
+        <xsl:if test="substring-before(concat($nextLine, $newline), $newline)" >
+          <xsl:value-of select="$indent" />
+        </xsl:if>
+        <!-- and recurse to process the rest -->
+        <xsl:call-template name="printIndented">
+          <xsl:with-param name="text" select="$nextLine" />
+          <xsl:with-param name="indent" select="$indent" />
+        </xsl:call-template>
+      </xsl:when>
+      <xsl:otherwise>
+        <xsl:value-of select="concat($text, $newline)" />
+      </xsl:otherwise>
+    </xsl:choose>
+  </xsl:if>
+</xsl:template>
 </xsl:stylesheet>
