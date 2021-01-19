@@ -53,12 +53,12 @@
       </xs:annotation>
     </xs:element>
   </xs:sequence>
-  <xs:assert test="count(guest_flag) eq count(distinct-values(guest_flag))"/>
+  <xs:assert test="count(guest_flag) eq count(distinct-values(guest_flag))" />
 </xs:complexType>
 
 <xs:complexType name="CpuAffinityConfiguration">
   <xs:sequence>
-    <xs:element name="pcpu_id" type="xs:integer" maxOccurs="unbounded">
+    <xs:element name="pcpu_id" type="xs:integer" default="2" maxOccurs="unbounded">
       <xs:annotation>
         <xs:documentation>Description missing.</xs:documentation>
       </xs:annotation>
@@ -68,7 +68,7 @@
 
 <xs:complexType name="ClosConfiguration">
   <xs:sequence>
-    <xs:element name="vcpu_clos" type="xs:integer" maxOccurs="unbounded">
+    <xs:element name="vcpu_clos" type="xs:integer" default="0" maxOccurs="unbounded">
       <xs:annotation>
         <xs:documentation>Description missing.</xs:documentation>
       </xs:annotation>
@@ -96,22 +96,22 @@
 
 <xs:complexType name="MemoryInfo">
   <xs:sequence>
-    <xs:element name="start_hpa" type="HexFormat">
+    <xs:element name="start_hpa" type="HexFormat" default="0x100000000">
       <xs:annotation>
         <xs:documentation>Description missing.</xs:documentation>
       </xs:annotation>
     </xs:element>
-    <xs:element name="size" type="MemorySizeType">
+    <xs:element name="size" type="MemorySizeType" default="0x20000000">
       <xs:annotation>
         <xs:documentation>Description missing.</xs:documentation>
       </xs:annotation>
     </xs:element>
-    <xs:element name="start_hpa2" type="HexFormat" minOccurs="0">
+    <xs:element name="start_hpa2" type="HexFormat" default="0x0" minOccurs="0">
       <xs:annotation acrn:configurable="n">
         <xs:documentation>Start of second HPA for non-contiguous allocations in host for the VM.</xs:documentation>
       </xs:annotation>
     </xs:element>
-    <xs:element name="size_hpa2" type="MemorySizeType" minOccurs="0">
+    <xs:element name="size_hpa2" type="MemorySizeType" default="0x0" minOccurs="0">
       <xs:annotation acrn:configurable="n">
         <xs:documentation>Memory size of second HPA for non-contiguous allocations in Bytes for the VM.</xs:documentation>
       </xs:annotation>
@@ -215,7 +215,7 @@
 
 <xs:complexType name="LegancyVuartConfiguration">
   <xs:sequence>
-    <xs:element name="type" type="LegacyVuartType">
+    <xs:element name="type" type="LegacyVuartType" default="VUART_LEGACY_PIO">
       <xs:annotation>
         <xs:documentation>Description missing.</xs:documentation>
       </xs:annotation>
@@ -230,12 +230,12 @@
         <xs:documentation>Description missing.</xs:documentation>
       </xs:annotation>
     </xs:element>
-    <xs:element name="target_vm_id" type="xs:integer" minOccurs="0">
+    <xs:element name="target_vm_id" type="xs:integer" default="1" minOccurs="0">
       <xs:annotation>
         <xs:documentation>Description missing.</xs:documentation>
       </xs:annotation>
     </xs:element>
-    <xs:element name="target_uart_id" type="xs:integer" minOccurs="0">
+    <xs:element name="target_uart_id" type="xs:integer" default="1" minOccurs="0">
       <xs:annotation>
         <xs:documentation>Description missing.</xs:documentation>
       </xs:annotation>
@@ -256,18 +256,18 @@
 
 <xs:complexType name="ConsoleVuartConfiguration">
   <xs:sequence>
-    <xs:element name="base" type="PciVuartBase">
+    <xs:element name="base" type="PciVuartBase" default="INVALID_PCI_BASE">
       <xs:annotation>
         <xs:documentation>Description missing.</xs:documentation>
       </xs:annotation>
     </xs:element>
   </xs:sequence>
-  <xs:attribute name="id" type="xs:string" use="required"/>
+  <xs:attribute name="id" type="xs:string" use="required" />
 </xs:complexType>
 
 <xs:complexType name="CommunicationVuartConfiguration">
   <xs:sequence>
-    <xs:element name="base" type="PciVuartBase">
+    <xs:element name="base" type="PciVuartBase" default="INVALID_PCI_BASE">
       <xs:annotation>
         <xs:documentation>Description missing.</xs:documentation>
       </xs:annotation>
@@ -283,17 +283,17 @@
       </xs:annotation>
     </xs:element>
   </xs:sequence>
-  <xs:attribute name="id" type="xs:string" use="required"/>
+  <xs:attribute name="id" type="xs:string" use="required" />
 </xs:complexType>
 
 <xs:complexType name="MmioResourcesConfiguration">
   <xs:sequence>
-    <xs:element name="TPM2" type="Boolean" minOccurs="0">
+    <xs:element name="TPM2" type="Boolean" default="n" minOccurs="0">
       <xs:annotation>
         <xs:documentation>Description missing.</xs:documentation>
       </xs:annotation>
     </xs:element>
-    <xs:element name="p2sb" type="Boolean" minOccurs="0">
+    <xs:element name="p2sb" type="Boolean" default="n" minOccurs="0">
       <xs:annotation>
         <xs:documentation>Description missing.</xs:documentation>
       </xs:annotation>
@@ -303,7 +303,7 @@
 
 <xs:complexType name="PciDevsConfiguration">
   <xs:sequence>
-    <xs:element name="pci_dev" type="xs:string" maxOccurs="unbounded">
+    <xs:element name="pci_dev" type="xs:string" default="pci dev" maxOccurs="unbounded">
       <xs:annotation>
         <xs:documentation>Description missing.</xs:documentation>
       </xs:annotation>
@@ -313,7 +313,7 @@
 
 <xs:complexType name="BoardPrivateConfiguration">
   <xs:sequence>
-    <xs:element name="rootfs" type="xs:string">
+    <xs:element name="rootfs" type="xs:string" default="/dev/nvme0n1p3">
       <xs:annotation>
         <xs:documentation>Description missing.</xs:documentation>
       </xs:annotation>
