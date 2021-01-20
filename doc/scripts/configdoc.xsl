@@ -55,10 +55,11 @@
             <xsl:with-param name="indent" select="''" />
          </xsl:call-template>
          <xsl:value-of select="$newline" />
-         <!-- Occurence requirements -->
+<!-- Occurence requirements (removed for now)
          <xsl:call-template name="print-occurs">
            <xsl:with-param name="name" select="@name" />
          </xsl:call-template>
+-->
           <xsl:value-of select="$newline" />
        </xsl:if>
 
@@ -93,11 +94,13 @@
            <xsl:value-of select="$newline" />
          </xsl:otherwise>
        </xsl:choose>
+<!-- removing occurs info for now
        <xsl:text>   - </xsl:text>
        <xsl:call-template name="print-occurs" >
            <xsl:with-param name="name" select="@name" />
        </xsl:call-template>
         <xsl:value-of select="$newline" />
+-->
       </xsl:otherwise>
     </xsl:choose>
   </xsl:template>
@@ -122,6 +125,8 @@
 
   <xsl:template name="print-occurs">
     <xsl:param name="name" />
+  <!-- use the min/maxOccurs data to figure out if this is an optional
+       item, and how many occurrences are allowed -->
     <xsl:variable name="min">
       <xsl:choose>
         <xsl:when test="@minOccurs">
@@ -176,22 +181,16 @@
     <xsl:param name="indent" />
     <xsl:choose>
       <xsl:when test="xs:annotation">
-<!--        <xsl:apply-templates select="xs:annotation" /> -->
          <xsl:call-template name="printIndented">
            <xsl:with-param name="text" select="xs:annotation/xs:documentation" />
            <xsl:with-param name="indent" select="$indent" />
          </xsl:call-template>
       </xsl:when>
       <xsl:otherwise>
-        <xsl:text>&lt;description is missing &gt;</xsl:text>
+        <!-- <xsl:text>&lt;description is missing &gt;</xsl:text> -->
         <xsl:value-of select="$newline" />
       </xsl:otherwise>
     </xsl:choose>
-  </xsl:template>
-
-  <xsl:template match="xs:annotation">
-<!--    <xsl:value-of select="concat(normalize-space(xs:documentation), $newline)" /> -->
-    <xsl:value-of select="concat(xs:documentation, $newline)" />
   </xsl:template>
 
   <!--
@@ -229,7 +228,9 @@
 
   <xsl:template name="option-header">
     <xsl:param name="label" />
-
+    <!-- we're using the reST option directive for creating linkable
+         config option sections using the :option: role.  This also
+         gives us the option directive HTML formatting. -->
     <xsl:text>.. option:: </xsl:text>
     <xsl:value-of select="$label" />
     <xsl:value-of select="$newline" />
@@ -238,13 +239,17 @@
 <xsl:template name="printIndented">
   <xsl:param name="text" />
   <xsl:param name="indent" />
+  <!-- Handle multi-line documentation text and indent it properly for
+       the bullet list display we're using for node descriptions (but not for
+       heading descriptions -->
   <xsl:if test="$text">
     <xsl:variable name="thisLine" select="substring-before($text, $newline)" />
     <xsl:variable name="nextLine" select="substring-after($text, $newline)" />
     <xsl:choose>
-      <xsl:when test="$thisLine or $nextLine"><!-- $text contains at least one newline -->
-        <!-- print this line -->
+      <xsl:when test="$thisLine or $nextLine">
+        <!-- $text contains at least one newline, and there's more coming so print it -->
         <xsl:value-of select="concat($thisLine, $newline)" />
+        <!-- watch for two newlines in a row and avoid writing the indent -->
         <xsl:if test="substring-before(concat($nextLine, $newline), $newline)" >
           <xsl:value-of select="$indent" />
         </xsl:if>
