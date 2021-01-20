@@ -2,6 +2,9 @@
 <xs:schema xml:id="root" xmlns:xs="http://www.w3.org/2001/XMLSchema">
 
 <xs:simpleType name="MaxIoapicNumType">
+  <xs:annotation>
+    <xs:documentation>Integer from 1 to 10.</xs:documentation>
+  </xs:annotation>
   <xs:restriction base="xs:integer">
     <xs:minInclusive value="1" />
     <xs:maxInclusive value="10" />
@@ -9,6 +12,9 @@
 </xs:simpleType>
 
 <xs:simpleType name="MaxPciDevNumType">
+  <xs:annotation>
+    <xs:documentation>Integer from 1 to 1024.</xs:documentation>
+  </xs:annotation>
   <xs:restriction base="xs:integer">
     <xs:minInclusive value="1" />
     <xs:maxInclusive value="1024" />
@@ -16,6 +22,9 @@
 </xs:simpleType>
 
 <xs:simpleType name="MaxIoapicLinesType">
+  <xs:annotation>
+    <xs:documentation>Integer from 1 to 120.</xs:documentation>
+  </xs:annotation>
   <xs:restriction base="xs:integer">
     <xs:minInclusive value="1" />
     <xs:maxInclusive value="120" />
@@ -23,6 +32,9 @@
 </xs:simpleType>
 
 <xs:simpleType name="MaxMsixTableNumType">
+  <xs:annotation>
+    <xs:documentation>Integer from 1 to 2048.</xs:documentation>
+  </xs:annotation>
   <xs:restriction base="xs:integer">
     <xs:minInclusive value="1" />
     <xs:maxInclusive value="2048" />
@@ -30,6 +42,9 @@
 </xs:simpleType>
 
 <xs:simpleType name="MaxEmulatedMmioType">
+  <xs:annotation>
+    <xs:documentation>Integer from 1 to 128.</xs:documentation>
+  </xs:annotation>
   <xs:restriction base="xs:integer">
     <xs:minInclusive value="1" />
     <xs:maxInclusive value="128" />

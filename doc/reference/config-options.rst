@@ -9,7 +9,7 @@ ACRN-based application.  This document describes these option settings.
 
 .. contents::
    :local:
-   :depth: 1
+   :depth: 2
 
 Common option value types
 *************************

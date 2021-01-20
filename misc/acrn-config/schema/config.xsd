@@ -130,7 +130,11 @@ Machine Check Error on Page Size Change.</xs:documentation>
         <xs:documentation>Enable Inter-VM Shared memory feature.</xs:documentation>
       </xs:annotation>
     </xs:element>
-    <xs:element name="PSRAM" minOccurs="0" type="Boolean" />
+    <xs:element name="PSRAM" minOccurs="0" type="Boolean">
+      <xs:annotation>
+        <xs:documentation>Description missing</xs:documentation>
+      </xs:annotation>
+    </xs:element>
   </xs:all>
 </xs:complexType>
 
@@ -199,7 +203,11 @@ maximum supported resource.</xs:documentation>
         <xs:documentation>Maximum number of IO-APICs.</xs:documentation>
       </xs:annotation>
     </xs:element>
-    <xs:element name="MAX_KATA_VM_NUM" type="xs:integer" minOccurs="0" />
+    <xs:element name="MAX_KATA_VM_NUM" type="xs:integer" minOccurs="0">
+      <xs:annotation>
+        <xs:documentation>Description missing.</xs:documentation>
+      </xs:annotation>
+    </xs:element>
     <xs:element name="MAX_PCI_DEV_NUM" type="MaxPciDevNumType">
       <xs:annotation>
         <xs:documentation>Maximum number of PCI devices.</xs:documentation>
@@ -236,7 +244,11 @@ Leave blank if not sure.</xs:documentation>
         <xs:documentation>Segment, Bus, Device, and function of the GPU.</xs:documentation>
       </xs:annotation>
     </xs:element>
-    <xs:element name="UEFI_OS_LOADER_NAME" type="xs:string" minOccurs="0" />
+    <xs:element name="UEFI_OS_LOADER_NAME" type="xs:string" minOccurs="0">
+      <xs:annotation>
+        <xs:documentation>Description missing</xs:documentation>
+      </xs:annotation>
+    </xs:element>
   </xs:all>
 </xs:complexType>
 
@@ -279,13 +291,41 @@ hypervisor console ``vm_lists`` command.</xs:documentation>
 Refer SDM 17.19.2 for details, and use with caution.</xs:documentation>
       </xs:annotation>
     </xs:element>
-    <xs:element name="epc_section" type="EpcSection" minOccurs="0" />
-    <xs:element name="memory" type="MemoryInfo" minOccurs="0" />
-    <xs:element name="os_config" type="OsConfigurations" minOccurs="0" />
-    <xs:element name="legacy_vuart" type="LegancyVuartConfiguration" minOccurs="2" maxOccurs="2" />
-    <xs:element name="console_vuart" type="ConsoleVuartConfiguration" />
-    <xs:element name="communication_vuart" type="CommunicationVuartConfiguration" maxOccurs="unbounded" />
-    <xs:element name="mmio_resources" type="MmioResourcesConfiguration" minOccurs="0" />
+    <xs:element name="epc_section" type="EpcSection" minOccurs="0">
+      <xs:annotation>
+        <xs:documentation>Description missing</xs:documentation>
+      </xs:annotation>
+    </xs:element>
+    <xs:element name="memory" type="MemoryInfo" minOccurs="0">
+      <xs:annotation>
+        <xs:documentation>Description missing</xs:documentation>
+      </xs:annotation>
+    </xs:element>
+    <xs:element name="os_config" type="OsConfigurations" minOccurs="0">
+      <xs:annotation>
+        <xs:documentation>Description missing</xs:documentation>
+      </xs:annotation>
+    </xs:element>
+    <xs:element name="legacy_vuart" type="LegancyVuartConfiguration" minOccurs="2" maxOccurs="2">
+      <xs:annotation>
+        <xs:documentation>Description missing</xs:documentation>
+      </xs:annotation>
+    </xs:element>
+    <xs:element name="console_vuart" type="ConsoleVuartConfiguration">
+      <xs:annotation>
+        <xs:documentation>Description missing</xs:documentation>
+      </xs:annotation>
+    </xs:element>
+    <xs:element name="communication_vuart" type="CommunicationVuartConfiguration" maxOccurs="unbounded">
+      <xs:annotation>
+        <xs:documentation>Description missing</xs:documentation>
+      </xs:annotation>
+    </xs:element>
+    <xs:element name="mmio_resources" type="MmioResourcesConfiguration" minOccurs="0">
+      <xs:annotation>
+        <xs:documentation>Description missing</xs:documentation>
+      </xs:annotation>
+    </xs:element>
     <xs:element name="pt_intx" minOccurs="0">
       <xs:annotation>
         <xs:documentation>pt intx mapping.</xs:documentation>
