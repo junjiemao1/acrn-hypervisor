@@ -42,6 +42,11 @@
          described as an option.. -->
     <xsl:choose>
       <xsl:when test="//xs:complexType[@name=$ty]">
+<!-- for top level sections (level 2) put a begin/end comment for
+     potential use in rst include directives -->
+       <xsl:if test="$level = 2">
+         <xsl:value-of select="concat('.. section-start ', $prefix, @name, $newline)"/>
+       </xsl:if>
        <!-- The section header -->
        <xsl:if test="$level &lt;= 4">
          <xsl:call-template name="section-header">
@@ -55,7 +60,7 @@
             <xsl:with-param name="indent" select="''" />
          </xsl:call-template>
          <xsl:value-of select="$newline" />
-<!-- Occurence requirements (removed for now)
+<!-- Occurence requirements (removed, but save just in case)
          <xsl:call-template name="print-occurs">
            <xsl:with-param name="name" select="@name" />
          </xsl:call-template>
@@ -68,6 +73,11 @@
          <xsl:with-param name="level" select="$level" />
          <xsl:with-param name="name" select="concat($prefix, @name)" />
        </xsl:apply-templates>
+<!-- for top level sections (level 2) put a begin/end comment for
+     potential use in rst include directives -->
+       <xsl:if test="$level = 2">
+         <xsl:value-of select="concat('.. section-end ', $prefix, @name, $newline)"/>
+       </xsl:if>
       </xsl:when>
       <xsl:otherwise>
        <xsl:call-template name="option-header">

@@ -16,8 +16,12 @@
     <xs:element name="RELEASE" type="Boolean">
       <xs:annotation>
         <xs:documentation>Build an image for release (``y``) or debug (``n``).
-*We should put some information here about the differences
-between a release and debug version.*</xs:documentation>
+In a **release** image, assertions are not enforced and these features
+are **not** available:
+
+- logs
+- serial console
+- hypervisor shell</xs:documentation>
       </xs:annotation>
     </xs:element>
     <xs:element name="SERIAL_CONSOLE" type="SerialConsoleOptions">
@@ -32,7 +36,8 @@ configuration.</xs:documentation>
     </xs:element>
     <xs:element name="MEM_LOGLEVEL" type="LogLevelType">
       <xs:annotation>
-        <xs:documentation>Default loglevel in memory.</xs:documentation>
+        <xs:documentation>Default loglevel severity for log messages stored in memory.
+Messages with a lower severity (higher value) are discarded.</xs:documentation>
       </xs:annotation>
     </xs:element>
     <xs:element name="NPK_LOGLEVEL" type="LogLevelType">
@@ -42,7 +47,9 @@ configuration.</xs:documentation>
     </xs:element>
     <xs:element name="CONSOLE_LOGLEVEL" type="LogLevelType">
       <xs:annotation>
-        <xs:documentation>Default loglevel on the serial console.</xs:documentation>
+        <xs:documentation>Default loglevel severity for log messages
+written to the serial console. Messages with lower severity (higher
+value) are not displayed.</xs:documentation>
       </xs:annotation>
     </xs:element>
     <xs:element name="LOG_DESTINATION" type="LogLevelType">
