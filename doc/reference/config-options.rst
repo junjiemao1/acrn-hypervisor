@@ -30,6 +30,10 @@ Integer
   first character must not be a ``0``. Only positive values are
   expected.
 
+String
+  A sequence of UTF-8 characters.  String-length limits or specific
+  string value restrictions are defined in the option description.
+
 
 .. comment This configdoc.txt is generated during the doc build process
    from the acrn config schema files found in misc/acrn-config/schema
