@@ -48,6 +48,9 @@ doxy: copy-to-sourcedir
 
 content: copy-to-sourcedir
 	$(Q)scripts/extract_content.py $(SOURCEDIR) misc
+	$(Q)mkdir -p $(SOURCEDIR)/misc/acrn-config/schema
+	$(Q)rsync -rt ../misc/acrn-config/schema/*.xsd $(SOURCEDIR)/misc/acrn-config/schema
+	$(Q)xsltproc -xinclude ./scripts/configdoc.xsl $(SOURCEDIR)/misc/acrn-config/schema/config.xsd > $(SOURCEDIR)/reference/configdoc.txt
 
 kconfig: copy-to-sourcedir
 	$(Q)srctree=../hypervisor \
