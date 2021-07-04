@@ -188,8 +188,8 @@ def extract(board_etree):
     try:
         namespace = parse_dsdt()
     except Exception as e:
-        logging.info(f"Parse ACPI DSDT/SSDT failed: {str(e)}")
-        logging.info(f"Will not extract information from ACPI DSDT/SSDT")
+        logging.warning(f"Parse ACPI DSDT/SSDT failed: {str(e)}")
+        logging.warning(f"Will not extract information from ACPI DSDT/SSDT")
         return
 
     interpreter = ConcreteInterpreter(namespace)
@@ -197,6 +197,6 @@ def extract(board_etree):
         try:
             fetch_device_info(devices_node, interpreter, device.name)
         except Exception as e:
-            logging.info(f"Fetch information about device object {device.name} failed: {str(e)}")
+            logging.warning(f"Fetch information about device object {device.name} failed: {str(e)}")
 
 advanced = True
