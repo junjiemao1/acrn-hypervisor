@@ -19,7 +19,12 @@ from acpiparser.rdt import *
 
 from extractors.helpers import add_child, get_node
 
-device_objects = defaultdict(lambda: {})
+device_objects = defaultdict(lambda: {})                       # device_path -> object_name -> tree
+device_deps = defaultdict(lambda: defaultdict(lambda: set()))     # device_path -> dep_type -> {device_path}
+DEP_TYPE_USES = "uses"
+DEP_TYPE_USED_BY = "is used by"
+DEP_TYPE_CONSUMES = "consumes resources from"
+DEP_TYPE_PROVIDES = "provides resources to"
 
 def parse_eisa_id(eisa_id):
     chars = [
@@ -117,13 +122,162 @@ resource_parsers = {
     (1, LARGE_RESOURCE_ITEM_EXTENDED_ADDRESS_SPACE): parse_address_space_resource,
 }
 
-def add_object_to_device(context, device_path, obj_name, result):
-    if not obj_name in device_objects[device_path].keys():
-        tree = builder.build_value(result)
-        if tree:
-            device_objects[device_path][obj_name] = builder.DefName(obj_name, tree)
+class CollectDependencyVisitor(Visitor):
+    class AnalysisResult:
+        def __init__(self):
+            self.direct = defaultdict(lambda: list())  # device path -> [decls]
+            self.all = defaultdict(lambda: list())  # device path -> [decls]
+
+        def add_direct_dep(self, scope_decl, decl):
+            scope_name = scope_decl.name if scope_decl else "global"
+            if decl not in self.direct[scope_name]:
+                self.direct[scope_name].append(decl)
+            if decl not in self.all[scope_name]:
+                self.all[scope_name].append(decl)
+
+        def add_indirect_dep(self, scope_decl, decl):
+            scope_name = scope_decl.name if scope_decl else "global"
+            if decl not in self.all[scope_name]:
+                self.all[scope_name].append(decl)
+
+    def __init__(self, context):
+        super().__init__(Direction.TOPDOWN)
+        self.context = context
+
+    def analyze(self, path):
+        self.result = self.AnalysisResult()
+        self.tree_under_analysis = self.context.lookup_symbol(path).tree
+        self.to_visit = set([self.tree_under_analysis])
+        self.current_tree = None
+        visited = set()
+
+        while self.to_visit:
+            self.current_tree = self.to_visit.pop()
+            if self.current_tree not in visited:
+                self.visit(self.current_tree)
+                visited.add(self.current_tree)
+
+        return self.result
+
+    def __add_dependency(self, decl):
+        scope_decl = decl
+        try:
+            while not isinstance(scope_decl, context.DeviceDecl):
+                scope_decl = self.context.lookup_symbol(self.context.parent(scope_decl.name))
+                if scope_decl.tree == self.current_tree:
+                    return
+        except UndefinedSymbol:
+            scope_decl = None
+
+        if self.current_tree == self.tree_under_analysis:
+            self.result.add_direct_dep(scope_decl, decl)
         else:
-            logging.warning(f"{device_path}.{obj_name}: will not added to vACPI due to unrecognized type: {result.__class__.__name__}")
+            self.result.add_indirect_dep(scope_decl, decl)
+
+    def NameString(self, tree):
+        self.context.change_scope(tree.scope)
+
+        try:
+            decl = self.context.lookup_symbol(tree.value)
+
+            if isinstance(decl, context.OperationFieldDecl) and isinstance(decl.region, str):
+                # Also visit the operation region in which the field is defined
+                op_region_decl = self.context.lookup_symbol(decl.region)
+                if isinstance(op_region_decl, context.OperationRegionDecl):
+                    self.__add_dependency(op_region_decl)
+                    self.to_visit.add(op_region_decl.tree)
+            elif isinstance(decl, context.MethodDecl):
+                self.to_visit.add(decl.tree)
+
+            # Do not record the object under analysis as a dependency
+            if decl.tree != self.tree_under_analysis:
+                self.__add_dependency(decl)
+        except UndefinedSymbol:
+            pass
+
+        self.context.pop_scope()
+
+def add_object_to_device(interpreter, device_path, obj_name, result):
+    def get_fresh_name(device_path):
+        fmt = "unnamed_{}"
+        for i in range(1, 100):
+            candidate = fmt.format(i)
+            if candidate not in device_objects[device_path].keys():
+                return candidate
+        raise NotImplementedError(f"{device_path}: Too many unnamed objects.")
+    def aux(device_path, obj_name, result):
+        if not obj_name in device_objects[device_path].keys():
+            visitor = CollectDependencyVisitor(interpreter.context)
+            deps = visitor.analyze(f"{device_path}.{obj_name}")
+            copy_object = False
+
+            if deps.all:
+                # If the object refers to any operation region directly or indirectly, it is generally necessary to copy
+                # the original definition of the object.
+                for dev, decls in deps.all.items():
+                    if dev != "global" and set(filter(lambda x: isinstance(x, context.OperationRegionDecl), decls)):
+                        copy_object = True
+                        break
+
+            if result == None or copy_object:
+                if "global" in deps.direct.keys():
+                    global_objs = ', '.join(map(lambda x: x.name, deps.all["global"]))
+                    raise NotImplementedError(f"{device_path}.{obj_name}: references to global objects: {global_objs}")
+
+                # Add directly referred objects first
+                for peer_device, peer_decls in deps.direct.items():
+                    for peer_decl in peer_decls:
+                        peer_obj_name = peer_decl.name[-4:]
+                        if isinstance(peer_decl, context.OperationRegionDecl):
+                            aux(peer_device, peer_obj_name, None)
+                        elif isinstance(peer_decl, context.OperationFieldDecl):
+                            device_objects[peer_device][get_fresh_name(peer_device)] = peer_decl.parent_tree
+                        else:
+                            if isinstance(peer_decl, context.MethodDecl) and peer_decl.nargs > 0:
+                                raise NotImplementedError(f"{peer_decl.name}: copy of methods with arguments is not supported")
+                            value = interpreter.interpret_method_call(peer_decl.name)
+                            aux(peer_device, peer_obj_name, value)
+
+                        # Declare decl as an external symbol in the template of device_path so that the template can be
+                        # parsed on its own
+                        device_objects[device_path][get_fresh_name(device_path)] = builder.DefExternal(
+                            peer_decl.name,
+                            peer_decl.object_type(),
+                            peer_decl.nargs if isinstance(peer_decl, context.MethodDecl) else 0)
+                        device_deps[device_path][DEP_TYPE_USES].add(peer_device)
+                        device_deps[peer_device][DEP_TYPE_USED_BY].add(device_path)
+
+                decl = interpreter.context.lookup_symbol(f"{device_path}.{obj_name}")
+                device_objects[device_path][obj_name] = decl.tree
+            else:
+                tree = builder.build_value(result)
+                if tree:
+                    device_objects[device_path][obj_name] = builder.DefName(obj_name, tree)
+                else:
+                    raise NotImplementedError(f"{device_path}.{obj_name}: unrecognized type: {result.__class__.__name__}")
+
+    try:
+        aux(device_path, obj_name, result)
+
+        # A device also depends on resource providers. If the given object is a resource template, scan for the encoded
+        # resource sources.
+        if obj_name == "_CRS":
+            namespace = interpreter.context
+            rdt = parse_resource_data(result.get())
+            for item in rdt.items:
+                source = getattr(item, "resource_source", None)
+                if source:
+                    source = source.decode("ascii")
+                    namespace.change_scope(device_path)
+                    try:
+                        peer_device = namespace.lookup_symbol(namespace.normalize_namepath(source)).name
+                        device_deps[device_path][DEP_TYPE_CONSUMES].add(peer_device)
+                        device_deps[peer_device][DEP_TYPE_PROVIDES].add(device_path)
+                    except:
+                        pass
+                    namespace.pop_scope()
+    except NotImplementedError as e:
+        logging.info(f"{device_path}.{obj_name}: will not be added to vACPI, reason: {str(e)}")
 
 def fetch_device_info(devices_node, interpreter, namepath):
     logging.info(f"Fetch information about device object {namepath}")
@@ -141,7 +295,7 @@ def fetch_device_info(devices_node, interpreter, namepath):
             sta = result.get()
             if sta & 0x1 == 0:
                 return
-            add_object_to_device(interpreter.context, namepath, "_STA", result)
+            add_object_to_device(interpreter, namepath, "_STA", result)
 
         # Hardware ID
         hid = ""
@@ -158,7 +312,7 @@ def fetch_device_info(devices_node, interpreter, namepath):
                     hid = hex(hid)
             else:
                 hid = "<unknown>"
-            add_object_to_device(interpreter.context, namepath, "_HID", result)
+            add_object_to_device(interpreter, namepath, "_HID", result)
 
         # Compatible ID
         cids = []
@@ -193,14 +347,14 @@ def fetch_device_info(devices_node, interpreter, namepath):
             result = interpreter.interpret_method_call(f"{namepath}._UID")
             uid = result.get()
             add_child(element, "acpi_uid", str(uid))
-            add_object_to_device(interpreter.context, namepath, "_UID", result)
+            add_object_to_device(interpreter, namepath, "_UID", result)
 
         # Description
         if interpreter.context.has_symbol(f"{namepath}._STR"):
             result = interpreter.interpret_method_call(f"{namepath}._STR")
             desc = result.get().decode(encoding="utf-16").strip("\00")
             element.set("description", desc)
-            add_object_to_device(interpreter.context, namepath, "_STR", result)
+            add_object_to_device(interpreter, namepath, "_STR", result)
 
         # Address
         if interpreter.context.has_symbol(f"{namepath}._ADR"):
@@ -212,7 +366,7 @@ def fetch_device_info(devices_node, interpreter, namepath):
                 logging.warning(f"{namepath} has siblings with duplicated address {adr}.")
             else:
                 element.set("address", hex(adr) if isinstance(adr, int) else adr)
-            add_object_to_device(interpreter.context, namepath, "_ADR", result)
+            add_object_to_device(interpreter, namepath, "_ADR", result)
 
         # Status
         if sta is not None:
@@ -235,7 +389,7 @@ def fetch_device_info(devices_node, interpreter, namepath):
                 else:
                     add_child(element, "resource", type=item.__class__.__name__, id=f"res{idx}")
 
-            add_object_to_device(interpreter.context, namepath, "_CRS", result)
+            add_object_to_device(interpreter, namepath, "_CRS", result)
 
         # PCI interrupt routing
         if interpreter.context.has_symbol(f"{namepath}._PRT"):
@@ -309,5 +463,13 @@ def extract(board_etree):
                         name,
                         builder.TermList(*list(objs.values())))))
             add_child(element, "aml_template", visitor.generate(tree).hex())
+
+    for dev, deps in device_deps.items():
+        element = get_node(devices_node, f"//device[acpi_object='{dev}']")
+        if element is not None:
+            for kind, targets in deps.items():
+                for target in targets:
+                    if dev != target:
+                        add_child(element, "dependency", target, type=kind)
 
 advanced = True

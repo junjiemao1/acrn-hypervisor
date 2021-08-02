@@ -30,6 +30,14 @@ class FieldDecl(NamedDecl):
     def dump(self):
         print(f"{self.name}: {self.__class__.__name__}, {self.length} bits")
 
+class OperationRegionDecl(NamedDecl):
+    @staticmethod
+    def object_type():
+        return 10
+
+    def __init__(self, name, tree):
+        super().__init__(name, tree)
+
 class OperationFieldDecl(NamedDecl):
     def __init__(self, name, length, tree):
         super().__init__(name, tree)
@@ -37,6 +45,7 @@ class OperationFieldDecl(NamedDecl):
         self.offset = None
         self.length = length
         self.access_width = None
+        self.parent_tree = None
 
     def set_location(self, region, offset, access_width):
         self.region = region
@@ -154,6 +163,13 @@ class Context:
                 return parent[:-1]
             else:
                 return parent
+
+    @staticmethod
+    def normalize_namepath(namepath):
+        path = namepath.lstrip("\\^")
+        prefix = namepath[:(len(namepath) - len(path))]
+        parts = '.'.join(map(lambda x: x[:4].ljust(4, '_'), path.split(".")))
+        return prefix + parts
 
     def __init__(self):
         self.streams = {}
