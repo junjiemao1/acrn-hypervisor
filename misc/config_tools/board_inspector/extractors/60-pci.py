@@ -141,7 +141,14 @@ def parse_device(bus_node, device_path):
         prt_address = hex(int(device_node.get("address"), 16) | 0xffff)
         mapping = device_node.xpath(f"../interrupt_pin_routing/routing[@address='{prt_address}']/mapping[@pin='{pin_name}']")
         if len(mapping) > 0:
-            res_node.set("source", mapping[0].get("source"))
+            source = mapping[0].get("source")
+            index = mapping[0].get("index", None)
+            if index == None:
+                res_node.set("source", source)
+            else:
+                router_res = device_node.getroottree().xpath(f"//device[acpi_object='{source}']/resource[@id='res{index}' and @type='irq']")
+                if len(router_res) > 0:
+                    res_node.set("source", router_res[0].get("int"))
 
     # Secondary bus
     if cfg.header.header_type == 1:
