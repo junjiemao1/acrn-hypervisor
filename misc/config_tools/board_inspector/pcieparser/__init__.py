@@ -32,11 +32,14 @@ class PCIConfigSpace(namedtuple("PCIConfigSpace", ["header", "caps", "extcaps"])
         return False
 
 def parse_config_space(path):
-    data = open(os.path.join(path, "config"), mode='rb').read()
-    hdr = header(data)
-    caps = capabilities(data, hdr.capability_pointer)
-    config_space = PCIConfigSpace(hdr, caps, [])
-    if config_space.has_cap("PCI Express"):
-        extcaps = extended_capabilities(data)
-        config_space = PCIConfigSpace(hdr, caps, extcaps)
-    return config_space
+    try:
+        data = open(os.path.join(path, "config"), mode='rb').read()
+        hdr = header(data)
+        caps = capabilities(data, hdr.capability_pointer)
+        config_space = PCIConfigSpace(hdr, caps, [])
+        if config_space.has_cap("PCI Express"):
+            extcaps = extended_capabilities(data)
+            config_space = PCIConfigSpace(hdr, caps, extcaps)
+        return config_space
+    except FileNotFoundError:
+        return None
