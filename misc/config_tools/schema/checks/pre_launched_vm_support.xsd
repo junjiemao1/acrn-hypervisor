@@ -1,9 +1,11 @@
 <?xml version="1.0"?>
+<!-- Copyright (C) 2022 Intel Corporation. -->
+<!-- SPDX-License-Identifier: BSD-3-Clause -->
 <xs:schema xml:id="root"
-	   xmlns:xs="http://www.w3.org/2001/XMLSchema"
-	   xmlns:acrn="https://projectacrn.org">
+           xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:acrn="https://projectacrn.org">
 
-  <xs:assert test="every $cpu in vm/cpu_affinity/pcpu_id satisfies count(processors//thread[cpu_id = $cpu]) = 1">
+  <xs:assert test="every $cpu in vm//cpu_affinity/pcpu_id satisfies count(processors//thread[cpu_id = $cpu]) = 1">
     <xs:annotation acrn:severity="warning">
       <xs:documentation>The physical CPUs allocated to VMs shall exist on the target board.
 
@@ -23,8 +25,8 @@ To fix this error, you can
   </xs:assert>
 
   <xs:assert test="every $vm in vm satisfies
-		   every $cpu in $vm/cpu_affinity/pcpu_id satisfies
-		   processors//thread[cpu_id = $cpu]/core_type = processors//thread[cpu_id = $vm/cpu_affinity/pcpu_id[1]]/core_type">
+                   every $cpu in $vm//cpu_affinity/pcpu_id satisfies
+                   processors//thread[cpu_id = $cpu]/core_type = processors//thread[cpu_id = $vm//cpu_affinity/pcpu_id[1]]/core_type">
     <xs:annotation acrn:severity="error">
       <xs:documentation>The physical CPUs allocated to the same VM shall have the same core types.
 

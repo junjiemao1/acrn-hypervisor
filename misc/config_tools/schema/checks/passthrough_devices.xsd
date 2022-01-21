@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<!-- Copyright (C) 2022 Intel Corporation. -->
+<!-- SPDX-License-Identifier: BSD-3-Clause -->
+<xs:schema xml:id="root"
+           xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:acrn="https://projectacrn.org">
+
+  <xs:assert test="every $vm in /acrn-config/vm satisfies
+                   $vm//load_order = 'PRE_LAUNCHED_VM' or not($vm//mmio_resources/p2sb = 'y')">
+    <xs:annotation acrn:severity="error" acrn:report-on="$vm//mmio_resources/p2sb">
+      <xs:documentation>VM "{$vm/name}" is not a pre-launched VM and cannot have a P2SB (Primary-to-Sideband bridge) passed through to it.  Remove the mmio_resources.p2sb value for this VM.</xs:documentation>
+    </xs:annotation>
+  </xs:assert>
+
+  <xs:assert test="every $vm in /acrn-config/vm satisfies
+                   not($vm//mmio_resources/TPM2 = 'y') or not($vm//mmio_resources/p2sb = 'y')">
+    <xs:annotation acrn:severity="error" acrn:report-on="$vm//mmio_resources">
+      <xs:documentation>VM "{$vm/name}" is assigned both a TPM2 and P2SB (Primary-to-Sideband bridge), which is not a supported configuration. Remove one of these choices.</xs:documentation>
+    </xs:annotation>
+  </xs:assert>
+
+</xs:schema>
