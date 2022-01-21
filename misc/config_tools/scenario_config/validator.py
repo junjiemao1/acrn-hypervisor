@@ -9,8 +9,11 @@ import sys, os
 import argparse
 import lxml.etree as etree
 import logging
+import re
 
 try:
+    import elementpath_overlay
+    from elementpath.xpath_context import XPathContext
     import xmlschema
 except ImportError:
     logging.error("Python package `xmlschema` is not installed.\n" +
@@ -59,6 +62,52 @@ schema_root = None
 datachecks = None
 load_schema(os.path.join(schema_dir, "config.xsd"), os.path.join(schema_dir, "datachecks.xsd"))
 
+def get_counter_example(error):
+    assertion = error.validator
+    if not isinstance(assertion, xmlschema.validators.assertions.XsdAssert):
+        return {}
+
+    elem = error.obj
+    context = XPathContext(elem, variables={'value': None})
+    context.counter_example = {}
+    result = assertion.token.evaluate(context)
+
+    if result == False:
+        return context.counter_example
+    else:
+        return {}
+
+expr_regex = re.compile("{[^{}]*}")
+def format_description(main_etree, error):
+    def format_nodeset(ns):
+        if isinstance(ns, str):
+            return ns
+        elif isinstance(ns, (int, float)):
+            return str(ns)
+        elif isinstance(ns, etree._Element):
+            return ns.text
+        else:
+            return str(ns)
+
+    anno = error.validator.annotation
+    description = anno.elem.find("{http://www.w3.org/2001/XMLSchema}documentation").text
+    counter_example = get_counter_example(error)
+    variables = {k.obj.source.strip("$"): v for k,v in counter_example.items()}
+
+    exprs = set(expr_regex.findall(description))
+    for expr in exprs:
+        result = main_etree.xpath(expr.strip("{}"), **variables)
+        if len(result) == 1:
+            value = format_nodeset(result[0])
+        elif len(result) > 1:
+            s = ', '.join(map(format_nodeset, result))
+            value = f"[{s}]"
+        else:
+            value = "{unknown}"
+        description = description.replace(expr, value)
+
+    return description
+
 def validate_one(board_xml, scenario_xml):
     nr_schema_errors = 0
     nr_check_errors = 0
@@ -80,15 +129,16 @@ def validate_one(board_xml, scenario_xml):
 
         it = datachecks.iter_errors(main_etree)
         for error in it:
-            logging.debug(error)
-
             anno = error.validator.annotation
             severity = anno.elem.get("{https://projectacrn.org}severity")
+            description = format_description(main_etree, error)
 
             if severity == "error":
                 nr_check_errors += 1
+                logging.error(description)
             elif severity == "warning":
                 nr_check_warnings += 1
+                logging.warning(description)
 
         if nr_check_errors > 0:
             logging.error(f"Board {board_name} and scenario {scenario_name} have inconsistent data: {nr_check_errors} errors, {nr_check_warnings} warnings.")
