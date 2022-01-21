@@ -10,8 +10,12 @@ import argparse
 import logging
 from copy import copy
 from collections import namedtuple
+import re
 
 try:
+    import elementpath
+    import elementpath_overlay
+    from elementpath.xpath_context import XPathContext
     import xmlschema
 except ImportError:
     logging.error("Python package `xmlschema` is not installed.\n" +
@@ -71,15 +75,87 @@ class ScenarioValidator:
         errors = []
 
         unified_node = copy(scenario_etree.getroot())
+        parent_map = {c : p for p in unified_node.iter() for c in p}
         unified_node.extend(board_etree.getroot())
         it = self.datachecks.iter_errors(unified_node)
         for error in it:
-            logging.debug(f"{error.elem}: {error.message}")
-            anno = error.validator.annotation
-            severity = anno.elem.get("{https://projectacrn.org}severity")
-            errors.append(ValidationError(error.elem, error.message, severity))
+            e = self.format_error(unified_node, parent_map, error)
+            logging.debug(e)
+            errors.append(e)
 
         return errors
+
+    @staticmethod
+    def format_paths(unified_node, parent_map, report_on, variables):
+        elems = elementpath.select(unified_node, report_on, variables = variables)
+        paths = []
+        for elem in elems:
+            path = []
+            while elem is not None:
+                path_segment = elem.tag
+                parent = parent_map.get(elem, None)
+                if parent is not None:
+                    children = parent.findall(elem.tag)
+                    if len(children) > 1:
+                        path_segment += f"[{children.index(elem) + 1}]"
+                path.insert(0, path_segment)
+                elem = parent
+            paths.append(f"/{'/'.join(path)}")
+        return paths
+
+    @staticmethod
+    def get_counter_example(error):
+        assertion = error.validator
+        if not isinstance(assertion, xmlschema.validators.assertions.XsdAssert):
+            return {}
+
+        elem = error.obj
+        context = XPathContext(elem, variables={'value': None})
+        context.counter_example = {}
+        result = assertion.token.evaluate(context)
+
+        if result == False:
+            return context.counter_example
+        else:
+            return {}
+
+    @staticmethod
+    def format_error(unified_node, parent_map, error):
+        def format_node(n):
+            if isinstance(n, str):
+                return n
+            elif isinstance(n, (int, float)):
+                return str(n)
+            elif isinstance(n, object) and n.__class__.__name__.endswith("Element"):
+                return n.text
+            else:
+                return str(n)
+
+        anno = error.validator.annotation
+        counter_example = ScenarioValidator.get_counter_example(error)
+        variables = {k.obj.source.strip("$"): v for k,v in counter_example.items()}
+
+        paths = ScenarioValidator.format_paths(unified_node, parent_map, anno.elem.get("{https://projectacrn.org}report-on"), variables)
+        description = anno.elem.find("{http://www.w3.org/2001/XMLSchema}documentation").text
+        severity = anno.elem.get("{https://projectacrn.org}severity")
+
+        expr_regex = re.compile("{[^{}]*}")
+        exprs = set(expr_regex.findall(description))
+        for expr in exprs:
+            result = elementpath.select(unified_node, expr.strip("{}"), variables = variables)
+            if isinstance(result, list):
+                if len(result) == 1:
+                    value = format_node(result[0])
+                elif len(result) > 1:
+                    s = ', '.join(map(format_node, result))
+                    value = f"[{s}]"
+                else:
+                    value = "{unknown}"
+            else:
+                value = str(result)
+            description = description.replace(expr, value)
+
+        return ValidationError(paths, description, severity)
 
 class ValidatorConstructionStage(PipelineStage):
     # The schema etree may still useful for schema-based transformation. Do not consume it.
