@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <xs:schema xml:id="root"
-	   xmlns:xs="http://www.w3.org/2001/XMLSchema"
-	   xmlns:acrn="https://projectacrn.org">
+           xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:acrn="https://projectacrn.org">
 
   <xs:assert test="count(//guest_flag[text() = 'GUEST_FLAG_NVMX_ENABLED']) = 0 or //NVMX_ENABLED = 'y'">
     <xs:annotation>

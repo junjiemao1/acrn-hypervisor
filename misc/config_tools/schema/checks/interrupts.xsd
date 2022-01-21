@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<!-- Copyright (C) 2022 Intel Corporation. -->
+<!-- SPDX-License-Identifier: BSD-3-Clause -->
+<xs:schema xml:id="root"
+           xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:acrn="https://projectacrn.org">
+
+  <xs:assert test="every $vm in /acrn-config/vm satisfies
+                   $vm//load_order = 'PRE_LAUNCHED_VM' or not(string-length($vm//pt_intx) > 0)">
+    <xs:annotation acrn:severity="error">
+      <xs:documentation>VM "{$vm/*/name}" is not a pre-launched VM and cannot have an explicit interrupt line assignment. Remove the pt_intx value for this VM.</xs:documentation>
+    </xs:annotation>
+  </xs:assert>
+
+</xs:schema>
