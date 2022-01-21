@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<xs:schema xml:id="root"
+	   xmlns:xs="http://www.w3.org/2001/XMLSchema"
+	   xmlns:acrn="https://projectacrn.org">
+
+  <xs:assert test="every $vm in /acrn-config/vm satisfies
+                   count(distinct-values($vm//cpu_affinity/pcpu_id)) = count($vm//cpu_affinity/pcpu_id)">
+    <xs:annotation acrn:severity="warning">
+      <xs:documentation>VM "{$vm/name}" has duplicated physical CPU assignment: {$vm//cpu_affinity/pcpu_id}.</xs:documentation>
+    </xs:annotation>
+  </xs:assert>
+
+  <xs:assert test="every $pcpu in /acrn-config/vm[starts-with(vm_type, 'PRE')]//cpu_affinity/pcpu_id satisfies
+                   count(/acrn-config/vm//cpu_affinity[pcpu_id = $pcpu]) &lt;= 1">
+    <xs:annotation acrn:severity="error">
+      <xs:documentation>Physical CPU {$pcpu} is assigned to pre-launched VM "{$pcpu/ancestor::vm/name}" and thus cannot be shared among multiple VMs: {//vm[cpu_affinity/pcpu_id = $pcpu]/name}.</xs:documentation>
+    </xs:annotation>
+  </xs:assert>
+
+</xs:schema>

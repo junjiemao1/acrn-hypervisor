@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<xs:schema xml:id="root"
+	   xmlns:xs="http://www.w3.org/2001/XMLSchema"
+	   xmlns:acrn="https://projectacrn.org">
+
+  <xs:assert test="every $vm in /acrn-config/vm satisfies
+                   starts-with($vm//vm_type, 'PRE') or not(string-length($vm//pt_intx) > 0)">
+    <xs:annotation acrn:severity="error">
+      <xs:documentation>VM {$vm/@id} is not a pre-launched VM and cannot have explicit interrupt line assignment.</xs:documentation>
+    </xs:annotation>
+  </xs:assert>
+
+</xs:schema>
