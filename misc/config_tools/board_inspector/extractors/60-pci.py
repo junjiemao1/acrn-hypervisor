@@ -93,6 +93,11 @@ def parse_device(bus_node, device_path):
         add_child(device_node, "subsystem_vendor", subvendor_id)
         add_child(device_node, "subsystem_identifier", subdevice_id)
 
+    # All the following information requires a valid header type. If the configuration space has a reader layout
+    # undefined in the PCIe specification, we stop here.
+    if hasattr(cfg.header, "unparsed_data"):
+        return device_node
+
     # BARs
     idx = 0
     for bar in cfg.header.bars:
