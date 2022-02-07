@@ -6,7 +6,7 @@
   <xs:assert test="every $vm in /acrn-config/vm satisfies
                    count(distinct-values($vm//cpu_affinity/pcpu_id)) = count($vm//cpu_affinity/pcpu_id)">
     <xs:annotation acrn:severity="warning">
-      <xs:documentation>VM "{$vm/name}" has duplicated physical CPU assignment: {$vm//cpu_affinity/pcpu_id}.</xs:documentation>
+      <xs:documentation>VM "{$vm/name}" repeats a physical CPU affinity assignment: {$vm//cpu_affinity/pcpu_id}. Remove the duplicates.</xs:documentation>
     </xs:annotation>
   </xs:assert>
 

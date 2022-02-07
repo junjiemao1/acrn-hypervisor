@@ -5,7 +5,7 @@
 
   <xs:assert test="count(/acrn-config/vm[vm_type = 'SERVICE_VM']) &lt; 2">
     <xs:annotation acrn:severity="error">
-      <xs:documentation>There can be at most 1 service VM.</xs:documentation>
+      <xs:documentation>There can be at most one service VM, but more than one was configured. Verify there is only one VM with  vm_type set to SERVICE_VM. </xs:documentation>
     </xs:annotation>
   </xs:assert>
 
@@ -13,7 +13,7 @@
                    every $svm in /acrn-config/vm[vm_type = 'SERVICE_VM'] satisfies
                    $pre_vm/@id &lt; $svm/@id">
     <xs:annotation acrn:severity="error">
-      <xs:documentation>The pre-launched VM (ID: {$pre_vm/@id}) shall not have a larger VM ID than the service VM (ID: {$svm/@id}).</xs:documentation>
+      <xs:documentation>This pre-launched VM (ID: {$pre_vm/@id}) must have a VM ID value less than the service VM (ID: {$svm/@id}). Adjust the VM ID values to fix this.</xs:documentation>
     </xs:annotation>
   </xs:assert>
 
@@ -21,7 +21,7 @@
                    every $svm in /acrn-config/vm[vm_type = 'SERVICE_VM'] satisfies
                    $post_vm/@id &gt; $svm/@id">
     <xs:annotation acrn:severity="error">
-      <xs:documentation>The post-launched VM (ID: {$post_vm/@id}) shall not have a smaller ID than the service VM (ID: {$svm/@id}).</xs:documentation>
+      <xs:documentation>This post-launched VM (ID: {$post_vm/@id}) must have a VM ID value greater than the service VM (ID: {$svm/@id}). Adjust the VM ID values to fix this.</xs:documentation>
     </xs:annotation>
   </xs:assert>
 
