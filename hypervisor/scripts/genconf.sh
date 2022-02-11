@@ -23,7 +23,7 @@ tool_dir=${base_dir}/../misc/config_tools
 diffconfig_list=${out}/.diffconfig
 
 python3 ${tool_dir}/board_config/board_cfg_gen.py --board ${board_xml} --scenario ${scenario_xml} --out ${out} &&
-python3 ${tool_dir}/scenario_config/scenario_cfg_gen.py --board ${board_xml} --scenario ${scenario_xml} --out ${out}
+python3 ${tool_dir}/scenario_config/validator.py ${board_xml} ${scenario_xml}
 
 if [ $? -ne 0 ]; then
     exit $?
