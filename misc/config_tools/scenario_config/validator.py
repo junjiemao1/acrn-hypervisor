@@ -21,6 +21,7 @@ except ImportError:
                   "To enable the validation, install the python package by executing: pip3 install xmlschema.")
     sys.exit(0)
 
+from schema_slicer import slice_schema
 from default_populator import DefaultValuePopulator
 
 def existing_file_type(parser):
@@ -47,6 +48,7 @@ def load_schema(xsd_xml, datachecks_xml):
 
     schema_etree = etree.parse(xsd_xml)
     schema_etree.xinclude()
+    slice_schema(schema_etree)
     schema = xmlschema.XMLSchema11(schema_etree)
 
     datachecks_etree = etree.parse(datachecks_xml)
