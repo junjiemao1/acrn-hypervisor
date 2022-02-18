@@ -19,13 +19,31 @@ class ScenarioTransformer:
 
         self._visit_optional_node = visit_optional_node
 
-    def transform_node(self, xsd_element_node, xml_node):
-        complex_type_node = xsd_element_node.find("xs:complexType", namespaces=self.xpath_ns)
-        if not complex_type_node:
-            type_name = xsd_element_node.get("type")
-            if type_name:
-                complex_type_node = self.get_node(self.xsd_etree, f"//xs:complexType[@name='{type_name}']")
+    def type_of_element(self, type_tag, xsd_element_node, xml_node):
+        xsd_alternative_node = xsd_element_node
 
+        if xml_node is not None:
+            for alternative in xsd_element_node.findall("xs:alternative", namespaces=self.xpath_ns):
+                if xml_node.xpath(alternative.get("test")):
+                    xsd_alternative_node = alternative
+                    break
+
+        type_node = xsd_alternative_node.find(type_tag, namespaces=self.xpath_ns)
+        if type_node is None:
+            type_name = xsd_alternative_node.get("type")
+            if type_name:
+                type_node = self.get_node(self.xsd_etree, f"//{type_tag}[@name='{type_name}']")
+
+        return type_node
+
+    def simple_type_of_element(self, xsd_element_node, xml_node = None):
+        return self.type_of_element("xs:simpleType", xsd_element_node, xml_node)
+
+    def complex_type_of_element(self, xsd_element_node, xml_node = None):
+        return self.type_of_element("xs:complexType", xsd_element_node, xml_node)
+
+    def transform_node(self, xsd_element_node, xml_node):
+        complex_type_node = self.complex_type_of_element(xsd_element_node, xml_node)
         if complex_type_node is not None:
             xsd_sequence_node = complex_type_node.find("xs:sequence", namespaces=self.xpath_ns)
             if xsd_sequence_node is not None:
