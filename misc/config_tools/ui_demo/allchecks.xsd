@@ -1,0 +1,99 @@
+<?xml version="1.0"?>
+<xs:schema xmlns:xi="http://www.w3.org/2003/XInclude" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+  <xs:element name="acrn-config">
+    <xs:complexType>
+      <xs:sequence>
+	<xs:any processContents="skip" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+      <xs:anyAttribute processContents="skip"/>
+
+      <xs:assert xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:acrn="https://projectacrn.org" test="every $vm in /acrn-config/vm satisfies                    count(distinct-values($vm//cpu_affinity/pcpu_id)) = count($vm//cpu_affinity/pcpu_id)" xml:base="checks/cpu_assignment.xsd">
+    <xs:annotation acrn:severity="warning" acrn:report-on="$vm/cpu_affinity">
+      <xs:documentation>VM "{$vm/name}" repeats a physical CPU affinity assignment: {$vm//cpu_affinity/pcpu_id}. Remove the duplicates.</xs:documentation>
+    </xs:annotation>
+  </xs:assert><xs:assert xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:acrn="https://projectacrn.org" test="every $pcpu in /acrn-config/vm[starts-with(vm_type, 'PRE')]//cpu_affinity/pcpu_id satisfies                    count(/acrn-config/vm//cpu_affinity[pcpu_id = $pcpu]) &lt;= 1" xml:base="checks/cpu_assignment.xsd">
+    <xs:annotation acrn:severity="error" acrn:report-on="//vm//cpu_affinity[pcpu_id = $pcpu]">
+      <xs:documentation>Physical CPU {$pcpu} is assigned to pre-launched VM "{$pcpu/ancestor::vm/name}" and thus cannot be shared among multiple VMs. Look for, and probably remove any affinity assignments to {$pcpu} in these VM's settings: {//vm[cpu_affinity/pcpu_id = $pcpu]/name}.</xs:documentation>
+    </xs:annotation>
+  </xs:assert>
+      <xs:assert xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:acrn="https://projectacrn.org" test="count(/acrn-config/vm[.//load_order = 'SERVICE_VM']) &lt; 2" xml:base="checks/vm_types.xsd">
+    <xs:annotation acrn:severity="error" acrn:report-on="//vm[.//load_order = 'SERVICE_VM']">
+      <xs:documentation>There can be at most one service VM, but more than one was configured. Verify there is only one VM with vm_type set to SERVICE_VM. </xs:documentation>
+    </xs:annotation>
+  </xs:assert><xs:assert xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:acrn="https://projectacrn.org" test="every $pre_vm in /acrn-config/vm[.//load_order = 'PRE_LAUNCHED_VM'] satisfies                    every $svm in /acrn-config/vm[.//load_order = 'SERVICE_VM'] satisfies                    $pre_vm/@id &lt; $svm/@id" xml:base="checks/vm_types.xsd">
+    <xs:annotation acrn:severity="error" acrn:report-on="$pre_vm">
+      <xs:documentation>This pre-launched VM "{$pre_vm/name}" (ID: {$pre_vm/@id}) must have a VM ID value less than the service VM (ID: {$svm/@id}). Adjust the VM ID values to fix this.</xs:documentation>
+    </xs:annotation>
+  </xs:assert><xs:assert xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:acrn="https://projectacrn.org" test="every $post_vm in /acrn-config/vm[.//load_order = 'POST_LAUNCHED_VM'] satisfies                    every $svm in /acrn-config/vm[.//load_order = 'SERVICE_VM'] satisfies                    $post_vm/@id &gt; $svm/@id" xml:base="checks/vm_types.xsd">
+    <xs:annotation acrn:severity="error" acrn:report-on="$post_vm">
+      <xs:documentation>This post-launched VM "{$post_vm/name}" (ID: {$post_vm/@id}) must have a VM ID value greater than the service VM (ID: {$svm/@id}). Adjust the VM ID values to fix this.</xs:documentation>
+    </xs:annotation>
+  </xs:assert>
+      <xs:assert xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:acrn="https://projectacrn.org" test="every $cpu in vm//cpu_affinity/pcpu_id satisfies count(processors//thread[cpu_id = $cpu]) = 1" xml:base="checks/pre_launched_vm_support.xsd">
+    <xs:annotation acrn:severity="warning">
+      <xs:documentation>The physical CPUs allocated to VMs shall exist on the target board.
+
+This assertion checks that the physical CPUs that are explicitly allocated to VMs do exist on the target board. Failures
+in meeting this assertion may cause the following.
+
+- The hypervisor may access wrong per CPU regions, leading to random memory corruption.
+- A VM may failed wake (by sending INIT-SIPI-SIPI IPIs) all the vCPUs allocated to it.
+
+To fix this error, you can
+
+- In the board XML, check whether all physical CPUs are encoded under the processors/ node. When generating the board
+  XML on the target board, make sure the native OS has not make any CPU offline.
+- In the scenario XML, check whether the allocated CPUs are specified using consecutive integers starting from 0, not
+  their APIC IDs or x2APIC IDs.</xs:documentation>
+    </xs:annotation>
+  </xs:assert><xs:assert xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:acrn="https://projectacrn.org" test="every $vm in vm satisfies                    every $cpu in $vm//cpu_affinity/pcpu_id satisfies                    processors//thread[cpu_id = $cpu]/core_type = processors//thread[cpu_id = $vm//cpu_affinity/pcpu_id[1]]/core_type" xml:base="checks/pre_launched_vm_support.xsd">
+    <xs:annotation acrn:severity="error">
+      <xs:documentation>The physical CPUs allocated to the same VM shall have the same core types.
+
+On platforms having both big and little cores, the current design of ACRN only allows allocating the same type of cores
+to a pre-launched VM.
+
+To fix this error, double check the allocation of physical CPUs to each pre-launched VM and ensure that only big cores
+or little cores are assigned, but not both.</xs:documentation>
+    </xs:annotation>
+  </xs:assert><xs:assert xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:acrn="https://projectacrn.org" test="hv//SSRAM_ENABLED = 'n' or empty(vm[load_order ='PRE_LAUNCHED_VM' and vm_type='RTVM']) or      every $cap in caches/cache[@level=3]/capability[@id='Software SRAM'] satisfies      (compare($cap/end, '0x80000000') &lt; 0 or compare($cap/start, '0xf8000000') &gt;= 0)" xml:base="checks/pre_launched_vm_support.xsd">
+    <xs:annotation acrn:severity="warning">
+      <xs:documentation>The physical software SRAM region shall not overlap with pre-defined regions in guest.
+
+When a pre-launched RT VM is enabled, the physical software SRAM is allocated to it at the same guest physical
+address. Thus it is assumed that the software SRAM region does not overlap with any pre-defined region in the
+pre-launched VM, such as the guest PCI hole which resides at 2G - 3.5G.
+
+This error cannot be fixed by tweaking the configurations. Report to _GitHub:
+https://github.com/projectacrn/acrn-hypervisor/issues if you meet this.</xs:documentation>
+
+    </xs:annotation>
+  </xs:assert><xs:assert xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:acrn="https://projectacrn.org" test="(count(vm[load_order ='PRE_LAUNCHED_VM' and vm_type ='RTVM']) = 1 and count(vm[load_order ='POST_LAUNCHED_VM' and vm_type ='RTVM']) = 0)                    or (count(vm[load_order ='PRE_LAUNCHED_VM' and vm_type ='RTVM']) = 0 and count(vm[load_order ='POST_LAUNCHED_VM' and vm_type ='RTVM']) &gt;= 0)" xml:base="checks/pre_launched_vm_support.xsd">
+    <xs:annotation acrn:severity="error">
+      <xs:documentation>There should not be both pre-launched RTVM and post-launched RTVM.
+And two or more pre-launched RTVM are not allowed.
+
+This assertion checks below invalid scenario:
+
+- Two or more pre-launched RTVM
+- One pre-launched RTVM and one or more post-launched RTVM
+
+To fix this error, please check the RTVM number to ensure the scenario configuration is valid.</xs:documentation>
+
+    </xs:annotation>
+  </xs:assert>
+      <xs:assert xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:acrn="https://projectacrn.org" test="every $vm in /acrn-config/vm satisfies                    $vm//load_order = 'PRE_LAUNCHED_VM' or not($vm//mmio_resources/p2sb = 'y')" xml:base="checks/passthrough_devices.xsd">
+    <xs:annotation acrn:severity="error" acrn:report-on="$vm//mmio_resources/p2sb">
+      <xs:documentation>VM "{$vm/name}" is not a pre-launched VM and cannot have a P2SB (Primary-to-Sideband bridge) passed through to it.  Remove the mmio_resources.p2sb value for this VM.</xs:documentation>
+    </xs:annotation>
+  </xs:assert><xs:assert xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:acrn="https://projectacrn.org" test="every $vm in /acrn-config/vm satisfies                    not($vm//mmio_resources/TPM2 = 'y') or not($vm//mmio_resources/p2sb = 'y')" xml:base="checks/passthrough_devices.xsd">
+    <xs:annotation acrn:severity="error" acrn:report-on="$vm//mmio_resources">
+      <xs:documentation>VM "{$vm/name}" is assigned both a TPM2 and P2SB (Primary-to-Sideband bridge), which is not a supported configuration. Remove one of these choices.</xs:documentation>
+    </xs:annotation>
+  </xs:assert>
+
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>
