@@ -1,5 +1,7 @@
 <?xml version="1.0"?>
-<xs:schema xml:id="root" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+<xs:schema xml:id="root"
+	   xmlns:xs="http://www.w3.org/2001/XMLSchema"
+	   xmlns:acrn="https://projectacrn.org">
 
 <xs:simpleType name="Boolean">
   <xs:annotation>
@@ -155,7 +157,7 @@ Read more about the available scheduling options in :ref:`cpu_sharing`.</xs:docu
 <xs:simpleType name="VMNameType">
   <xs:restriction base="xs:string">
     <xs:pattern value="([a-zA-Z0-9_\-]){1,15}" />
-  </xs:restriction>     
+  </xs:restriction>
 </xs:simpleType>
 
 <xs:simpleType name="VBDFType">
@@ -167,7 +169,7 @@ Read more about the available scheduling options in :ref:`cpu_sharing`.</xs:docu
 <xs:complexType name="IVSHMEMVM">
   <xs:sequence>
    <xs:element name="VM_NAME" type="VMNameType">
-     <xs:annotation>       
+     <xs:annotation>
        <xs:documentation>Name of the VM which use this IVSHMEM.</xs:documentation>
      </xs:annotation>
    </xs:element>
@@ -235,14 +237,14 @@ and no more than 512.</xs:documentation>
 <xs:complexType name="RDTType">
   <xs:sequence>
     <xs:element name="RDT_ENABLED" type="Boolean" default="n">
-      <xs:annotation>
+      <xs:annotation acrn:title="Intel Resource Director Technology">
         <xs:documentation>Enable the Intel Resource Director Technology (RDT)
 allocation feature. If the board hardware does not support
 RDT, setting this option to ``y`` is ignored.</xs:documentation>
       </xs:annotation>
     </xs:element>
     <xs:element name="CDP_ENABLED" type="Boolean" default="n">
-      <xs:annotation>
+      <xs:annotation acrn:title="Code and Data Prioritization">
         <xs:documentation>Specify whether to enable Code and Data Prioritization (CDP).
 CDP is an extension of CAT. Set to 'y' to enable the feature or 'n' to disable it.
 The 'y' will be ignored when hardware does not support CDP.</xs:documentation>
@@ -275,9 +277,8 @@ As :option:`vm.clos.vcpu_clos` specifies the index of the CLOS to be associated 
 <xs:complexType name="SSRAMInfo">
   <xs:sequence>
     <xs:element name="SSRAM_ENABLED" type="Boolean" default="n">
-      <xs:annotation>
-        <xs:documentation>Enable PTCM (Platform Tuning Configuration
-Manager).</xs:documentation>
+      <xs:annotation acrn:title="Software SRAM (for real-time apps)">
+        <xs:documentation>Enable the Software SRAM feature for real-time VMs. This feature reserves memory buffers as always-cached memory for improved VM performance.</xs:documentation>
       </xs:annotation>
     </xs:element>
   </xs:sequence>
