@@ -228,6 +228,25 @@ class ScenarioUpgrader(ScenarioTransformer):
             self.move_data_by_xpath(".//BUILD_TYPE", xsd_element_node, xml_parent_node, new_nodes)
         return False
 
+    def move_loglevel(self, xsd_element_node, xml_parent_node, new_nodes):
+        element_tag = xsd_element_node.get("name")
+        old_data_node = self.get_node(self.old_xml_etree, f"//hv//{element_tag}")
+        type_node = self.simple_type_of_element(xsd_element_node)
+
+        if old_data_node is not None and type_node is not None:
+            target_enum = self.get_node(type_node, f".//xs:enumeration[starts-with(@value, '{old_data_node.text[0]}')]/@value")
+            if target_enum is None:
+                target_enum = self.get_node(type_node, f".//xs:enumeration[last()]/@value")
+                if target_enum is None:
+                    target_enum = old_data_node.text
+
+            new_node = etree.Element(element_tag)
+            new_node.text = target_enum
+            new_nodes.append(new_node)
+            self.old_data_nodes.discard(old_data_node)
+
+        return False
+
     def move_legacy_vuart(self, xsd_element_node, xml_parent_node, new_nodes):
         # Preserve the legacy vuart for console only.
         legacy_vuart = self.get_from_old_data(xml_parent_node, ".//legacy_vuart[@id = '0']")
@@ -363,6 +382,9 @@ class ScenarioUpgrader(ScenarioTransformer):
         "security_vm": partialmethod(move_guest_flag, "GUEST_FLAG_SECURITY_VM"),
 
         "BUILD_TYPE": move_build_type,
+        "MEM_LOGLEVEL": move_loglevel,
+        "NPK_LOGLEVEL": move_loglevel,
+        "CONSOLE_LOGLEVEL": move_loglevel,
         "legacy_vuart": move_legacy_vuart,
         "vuart_connection": move_vuart_connections,
         "IVSHMEM": move_ivshmem,
