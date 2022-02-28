@@ -102,7 +102,7 @@
     <xsl:apply-templates select="memory" />
     <xsl:apply-templates select="os_config" />
     <xsl:call-template name="acpi_config" />
-    <xsl:call-template name="legacy_vuart" />
+    <xsl:call-template name="vuart_connection" />
     <xsl:call-template name="pci_dev_num" />
     <xsl:call-template name="pci_devs" />
     <xsl:if test="acrn:is-pre-launched-vm(load_order)">
@@ -253,20 +253,48 @@
     </xsl:if>
   </xsl:template>
 
-  <xsl:template name="legacy_vuart">
+  <xsl:template name="vuart_connection">
     <xsl:variable name="vm_id" select="@id" />
-    <xsl:for-each select="legacy_vuart">
-      <xsl:variable name="vuart_id" select="@id" />
+    <xsl:variable name="vmname" select="name/text()" />
+    <xsl:for-each select="//vuart_connection[endpoint/vm_name = $vmname]">
+      <xsl:variable name="connection_name" select="name/text()" />
+      <xsl:variable name="type" select="type/text()" />
+      <xsl:variable name="vuart_id" select="position()"/>
       <xsl:value-of select="acrn:initializer(concat('vuart[', $vuart_id, ']'), '{', true())" />
-      <xsl:value-of select="acrn:initializer('type', type)" />
-      <xsl:if test="base != 'INVALID_COM_BASE'">
-        <xsl:value-of select="acrn:initializer('addr.port_base', concat(../../../../allocation-data/acrn-config/vm[@id=$vm_id]/legacy_vuart[@id=$vuart_id]/base, 'U'))" />
-        <xsl:value-of select="acrn:initializer('irq', concat(../../../../allocation-data/acrn-config/vm[@id=$vm_id]/legacy_vuart[@id=$vuart_id]/irq, 'U'))" />
-        <xsl:if test="@id != '0'">
-          <xsl:value-of select="acrn:initializer('t_vuart.vm_id', concat(target_vm_id, 'U'))" />
-          <xsl:value-of select="acrn:initializer('t_vuart.vuart_id', concat(target_uart_id, 'U'))" />
-        </xsl:if>
-      </xsl:if>
+      <xsl:choose>
+        <xsl:when test="$type = 'legacy'">
+          <xsl:value-of select="acrn:initializer('type', 'VUART_LEGACY_PIO')" />
+        </xsl:when>
+        <xsl:when test="$type = 'pci'">
+          <xsl:value-of select="acrn:initializer('type', 'VUART_PCI')" />
+        </xsl:when>
+      </xsl:choose>
+      <xsl:value-of select="acrn:initializer('irq', concat(//allocation-data/acrn-config/vm[@id=$vm_id]/legacy_vuart[@id=$vuart_id]/irq, 'U'))" />
+      <xsl:for-each select="endpoint">
+        <xsl:choose>
+          <xsl:when test="vm_name = $vmname">
+            <xsl:choose>
+              <xsl:when test="$type = 'legacy'">
+                <xsl:value-of select="acrn:initializer('addr.port_base', concat(io_port, 'U'))" />
+              </xsl:when>
+              <xsl:when test="$type = 'pci'">
+                <xsl:variable name="b" select="substring-before(vbdf/text(), ':')" />
+                <xsl:variable name="d" select="substring-before(substring-after(vbdf/text(), ':'), '.')" />
+                <xsl:variable name="f" select="substring-after(vbdf/text(), '.')" />
+                <xsl:value-of select="acrn:initializer('addr.bdf', concat('{', $b, ', ', $d, ', ', $f, '}'))" />
+              </xsl:when>
+            </xsl:choose>
+          </xsl:when>
+          <xsl:otherwise>
+            <xsl:variable name="target_name" select="vm_name" />
+            <xsl:value-of select="acrn:initializer('t_vuart.vm_id', concat(//vm[name = $target_name]/@id, 'U'))" />
+            <xsl:for-each select="//vuart_connection[name = $connection_name][endpoint/vm_name = $target_name]">
+              <xsl:variable name="uart_num" select="position()"/>
+              <xsl:value-of select="acrn:initializer('t_vuart.vuart_id', concat($uart_num, 'U'))" />
+            </xsl:for-each>
+          </xsl:otherwise>
+        </xsl:choose>
+      </xsl:for-each>
       <xsl:text>},</xsl:text>
       <xsl:value-of select="$newline" />
     </xsl:for-each>

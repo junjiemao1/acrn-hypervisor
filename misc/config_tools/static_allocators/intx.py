@@ -77,23 +77,17 @@ def alloc_legacy_vuart_irqs(board_etree, scenario_etree, allocation_etree):
     for vm_node in vm_node_list:
         load_order = common.get_node("./load_order/text()", vm_node)
         irq_list = get_native_valid_irq() if load_order == "SERVICE_VM" else [f"{d}" for d in list(range(1,15))]
-        legacy_vuart_id_list = vm_node.xpath("legacy_vuart[base != 'INVALID_COM_BASE']/@id")
-        legacy_vuart_irq = ''
-        for legacy_vuart_id in legacy_vuart_id_list:
-            if legacy_vuart_id == '0' and load_order == "SERVICE_VM":
-                if hv_debug_console in native_ttys.keys():
-                    if native_ttys[hv_debug_console]['irq'] < LEGACY_IRQ_MAX:
-                        legacy_vuart_irq = native_ttys[hv_debug_console]['irq']
-                        if legacy_vuart_irq in irq_list:
-                            remove_irq(irq_list, legacy_vuart_irq)
-                    else:
-                        legacy_vuart_irq = assign_legacy_vuart_irqs(vm_node, legacy_vuart_id, irq_list)
-                else:
-                    raise lib.error.ResourceError(f"{hv_debug_console} is not in the native environment! The ttyS available are: {native_ttys.keys()}")
-            else:
-                legacy_vuart_irq = assign_legacy_vuart_irqs(vm_node, legacy_vuart_id, irq_list)
-
-            create_vuart_irq_node(allocation_etree, common.get_node("./@id", vm_node), load_order, legacy_vuart_id, legacy_vuart_irq)
+        vuart_id = '1'
+        vmname = common.get_node("./name/text()", vm_node)
+        vuart_connections = scenario_etree.xpath("//vuart_connection")
+        for connection in vuart_connections:
+            endpoint_list = connection.xpath(".//endpoint")
+            for endpoint in endpoint_list:
+                vm_name = common.get_node("./vm_name/text()",endpoint)
+                if vm_name == vmname:
+                    legacy_vuart_irq = alloc_irq(irq_list)
+                    create_vuart_irq_node(allocation_etree, common.get_node("./@id", vm_node), load_order, vuart_id, legacy_vuart_irq)
+                    vuart_id = str(int(vuart_id) + 1)
 
 def get_irqs_of_device(device_node):
     irqs = set()
