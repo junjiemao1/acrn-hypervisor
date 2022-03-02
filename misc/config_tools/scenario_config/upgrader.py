@@ -179,7 +179,8 @@ class SharedMemoryRegions:
 
         def format_xml_element(self):
             node = etree.Element("IVSHMEM_REGION")
-            node.set("name", self.name)
+            etree.SubElement(node, "NAME").text = self.name
+            etree.SubElement(node, "KIND").text = "Hypervisor"
             etree.SubElement(node, "IVSHMEM_SIZE").text = self.size
 
             vms_node = etree.SubElement(node, "IVSHMEM_VMS")
