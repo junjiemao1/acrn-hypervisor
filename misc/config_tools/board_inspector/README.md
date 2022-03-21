@@ -1,4 +1,6 @@
-board_parser.py will collect all board related info and then generate a board info file for acrn-config host tool usage.
+# ACRN Board Inspector
+
+The script board_inspector.py will collect all board related info and then generate a board info file for ACRN configurator.
 
 usage: python3 board_inspector.py <board_name> [--out board_info_file]
 
