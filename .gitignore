@@ -10,3 +10,9 @@ build
 venv
 *.egg-info
 /misc/config_tools/dist
+
+# ignore Eclipse project config
+.cproject
+.project
+.pydevproject
+/.settings/
