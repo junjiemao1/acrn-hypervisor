@@ -61,6 +61,7 @@ Depends:
    acrn-devicemodel,
    debconf (>=1.5.71)
 Suggests: acrn-doc
+Recommends: setserial
 Description: ACRN Hypervisor for IoT
  ACRN is an open source reference hypervisor, built to meet the unique
  needs of embedded IoT development.

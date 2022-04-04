@@ -111,6 +111,7 @@ export datadir = $(prefix)/share
 export includedir = $(prefix)/include
 export systemd_unitdir = /lib/systemd
 export docdir = $(datadir)/doc
+export sysconfdir = /etc
 
 export BUILD_VERSION = "$(DEB_VERSION_UPSTREAM)"
 export BUILD_TAG = "$(DEB_VENDOR)/$(DEB_VERSION)"
@@ -216,6 +217,10 @@ override_dh_auto_install-arch:
 		rm -f $(DESTDIR)$(libdir)/acrn/*.out;			\
 		mv $(DESTDIR)$(libdir)/acrn/*.bin			\
 			$(DESTDIR)$(libdir)/acrn/$b/$s;			\
+		if [ -d $(DESTDIR)$(sysconfdir) ]; then			\
+			mv $(DESTDIR)$(sysconfdir)			\
+				$(DESTDIR)$(libdir)/acrn/$b/$s;		\
+		fi;							\
 		if [ -d $(DESTDIR)$(libdir)/acrn/acpi ]; then		\
 			mv $(DESTDIR)$(libdir)/acrn/acpi		\
 				$(DESTDIR)$(libdir)/acrn/$b/$s;		\

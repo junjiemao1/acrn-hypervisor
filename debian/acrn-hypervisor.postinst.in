@@ -28,6 +28,7 @@ ACRNCFG="${ACRNDIR}/${BOARD}/${SCENARIO}/acrn.${BOARD}.${SCENARIO}.config"
 ACRNMAP="${ACRNDIR}/${BOARD}/${SCENARIO}/acrn.${BOARD}.${SCENARIO}.map"
 ACRNBIN="${ACRNDIR}/${BOARD}/${SCENARIO}/acrn.${BOARD}.${SCENARIO}.bin"
 ACRNACPI="${ACRNDIR}/${BOARD}/${SCENARIO}/acpi"
+ACRNETC="${ACRNDIR}/${BOARD}/${SCENARIO}/etc"
 
 case "$1" in
     configure)
@@ -37,6 +38,11 @@ case "$1" in
             cp ${ACRNBIN} /boot/acrn-@acrnversion@.bin
             if [ -d ${ACRNACPI} ]; then
                 cp ${ACRNACPI}/ACPI_VM* /boot
+            fi
+            if [ -f ${ACRNETC}/serial.conf ]; then
+                echo "# START - ACRN HYPERVISOR INSTALL" >> /etc/serial.conf
+                cat ${ACRNETC}/serial.conf >> /etc/serial.conf
+                echo "# END - ACRN HYPERVISOR INSTALL" >> /etc/serial.conf
             fi
             if command -v update-grub > /dev/null && [ -d /boot/grub ]; then
                 update-grub || :
