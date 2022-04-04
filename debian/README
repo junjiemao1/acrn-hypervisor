@@ -26,8 +26,6 @@ following Debian packages:
   refer to
   http://honk.sigxcpu.org/projects/git-buildpackage/manual-html/gbp.html.
 
-<<<<<<< Upstream, based on acrn/master
-=======
   To ease the build process a shell script wrapper
   ``debian/docker/acrn-docker-build.sh`` around a docker controlled build is
   provided. This script features the ``DISTRO`` environment variable to set the
@@ -63,7 +61,6 @@ following Debian packages:
 
   This will install python3-acrn-board-inspector with all the required dependencies.
 
->>>>>>> b4960d1 Fixup acrn-board-inspector
 **Special Package Properties**
 
 * ``acrn-hypervisor``
