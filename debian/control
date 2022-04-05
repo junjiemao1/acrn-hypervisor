@@ -10,7 +10,6 @@ Build-Depends:
    git,
    libssl-dev,
    libpciaccess-dev,
-   uuid-dev,
    libsystemd-dev,
    libevent-dev,
    libxml2-dev,
