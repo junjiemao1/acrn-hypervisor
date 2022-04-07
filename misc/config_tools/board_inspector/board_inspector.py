@@ -11,11 +11,11 @@ import subprocess # nosec
 import lxml.etree
 import argparse
 from importlib import import_module
-from cpuparser import parse_cpuid, get_online_cpu_ids, get_offline_cpu_ids
 
 script_dir = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(script_dir))
 
+from cpuparser import parse_cpuid, get_online_cpu_ids, get_offline_cpu_ids
 from inspectorlib import validator
 
 def check_deps():
