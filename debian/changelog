@@ -1,0 +1,8 @@
+acrn-hypervisor (3.0~1.gbpa42b82) UNRELEASED; urgency=medium
+
+  ** SNAPSHOT build @a42b829a194ffe6e89cb23f3f7edb73355e3e491 **
+
+  [ Helmut Buchsbaum ]
+  * Adding initial native Debian packaging for ACRN.
+
+ -- Helmut Buchsbaum <helmut.buchsbaum@opensource.tttech-industrial.com>  Mon, 11 Apr 2022 20:04:01 +0200
