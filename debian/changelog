@@ -1,8 +1,14 @@
-acrn-hypervisor (3.0~1.gbpa42b82) UNRELEASED; urgency=medium
+acrn-hypervisor (3.0~2.gbp6418b0) UNRELEASED; urgency=medium
 
-  ** SNAPSHOT build @a42b829a194ffe6e89cb23f3f7edb73355e3e491 **
+  ** SNAPSHOT build @6418b0fa1cd05414472b1bb72fc738787af325ad **
 
   [ Helmut Buchsbaum ]
   * Adding initial native Debian packaging for ACRN.
+  * Adding initial native Debian packaging for ACRN
+  * debian: Add docker build helpers
+  * hv: Fixup  serial.conf permissions
+  * debian: Handle /etc/serial.conf
+  * dm: Remove dependency on libuuid
+  * debian: Remove build dependency on uuid-dev
 
- -- Helmut Buchsbaum <helmut.buchsbaum@opensource.tttech-industrial.com>  Mon, 11 Apr 2022 20:04:01 +0200
+ -- Helmut Buchsbaum <helmut.buchsbaum@opensource.tttech-industrial.com>  Mon, 11 Apr 2022 20:08:38 +0200
