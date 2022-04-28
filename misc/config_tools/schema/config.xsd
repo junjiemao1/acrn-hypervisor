@@ -120,7 +120,7 @@ These settings can only be changed at build time.</xs:documentation>
     </xs:element>
     <xs:element name="IVSHMEM" type="IVSHMEMInfo">
       <xs:annotation acrn:title="Inter-VM shared memory" acrn:views="basic">
-        <xs:documentation>Configure shared memory regions for inter-VM communication.</xs:documentation>
+        <xs:documentation>Configure shared memory regions for inter-VM communication. Each memory region for VMs to share is specified by its name, size, and associated VMs.</xs:documentation>
       </xs:annotation>
     </xs:element>
     <xs:element name="SSRAM" minOccurs="0" type="SSRAMInfo">

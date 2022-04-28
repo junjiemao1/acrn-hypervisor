@@ -294,8 +294,8 @@ and no more than 512.</xs:documentation>
 <xs:complexType name="IVSHMEMInfo">
   <xs:sequence>
     <xs:element name="IVSHMEM_REGION" type="IVSHMEMRegionType" minOccurs="0" maxOccurs="unbounded">
-      <xs:annotation>
-        <xs:documentation>Create a memory region for VMs to share: specify its name, size, and associated VMs.</xs:documentation>
+      <xs:annotation acrn:title="">
+        <xs:documentation></xs:documentation>
       </xs:annotation>
     </xs:element>
   </xs:sequence>
