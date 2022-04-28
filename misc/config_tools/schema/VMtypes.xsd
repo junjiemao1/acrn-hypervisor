@@ -46,7 +46,7 @@
   <xs:all>
     <xs:element name="pcpu_id" type="xs:integer" default="2">
       <xs:annotation acrn:title="pCPU ID"
-		     acrn:options="//processors//thread/cpu_id/text()" acrn:options-sorted-by="int">
+		     acrn:options="board_xml://processors//thread/cpu_id/text()" acrn:options-sorted-by="int">
         <xs:documentation>ID of the pCPU that this VM's vCPU is allowed to pin to.</xs:documentation>
       </xs:annotation>
     </xs:element>
@@ -211,7 +211,8 @@ The size is a subset of the VM's total memory size specified on the Basic tab.</
 <xs:complexType name="VuartEndpointType">
   <xs:sequence>
     <xs:element name="vm_name" type="xs:string">
-      <xs:annotation acrn:title="VM Name">
+      <xs:annotation acrn:title="VM Name"
+		     acrn:options="scenario_json:$['acrn-config'].vm[*].name">
         <xs:documentation>Virtual UART port</xs:documentation>
       </xs:annotation>
     </xs:element>
@@ -269,7 +270,7 @@ The size is a subset of the VM's total memory size specified on the Basic tab.</
   <xs:sequence>
     <xs:element name="pci_dev" type="xs:string" minOccurs="0" maxOccurs="unbounded">
       <xs:annotation acrn:title="PCI device assignment"
-		     acrn:options="//device[class]/@description" acrn:options-sorted-by="lambda s: (s.split(' ', maxsplit=1)[-1].split(':')[0], s.split(' ')[0])">
+		     acrn:options="board_xml://device[class]/@description" acrn:options-sorted-by="lambda s: (s.split(' ', maxsplit=1)[-1].split(':')[0], s.split(' ')[0])">
         <xs:documentation>Select the PCI devices you want to assign to this virtual machine.</xs:documentation>
       </xs:annotation>
     </xs:element>

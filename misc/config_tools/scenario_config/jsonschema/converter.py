@@ -323,11 +323,12 @@ class XS2JS:
 
                 # dynamic enum
                 if '@acrn:options' in element['xs:annotation'] and 'dynamicEnum' in self.features:
+                    source, options = element['xs:annotation']['@acrn:options'].split(":", maxsplit=1)
                     dynamic_enum = {
                         'type': 'dynamicEnum',
                         'function': 'get_enum',
-                        'source': 'board_xml',
-                        'selector': element['xs:annotation']['@acrn:options'],
+                        'source': source,
+                        'selector': options,
                         'sorted': element['xs:annotation'].get('@acrn:options-sorted-by', None)
                     }
                     js_ele['enum'] = dynamic_enum
