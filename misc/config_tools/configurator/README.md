@@ -54,7 +54,6 @@ git clone https://github.com/projectacrn/acrn-hypervisor
 cd acrn-hypervisor/misc/config_tools
 python3 -m pip install -r requirements.txt
 cd configurator
-python3 -m pip install -r requirements.txt
 yarn
 ```
 

@@ -1,7 +1,0 @@
-build
-tqdm
-requests
-lxml
-xmltodict
-sphinx
-bs4

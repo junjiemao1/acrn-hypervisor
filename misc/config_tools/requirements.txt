@@ -2,3 +2,9 @@ defusedxml
 lxml
 elementpath
 xmlschema
+build
+tqdm
+requests
+xmltodict
+sphinx
+bs4
