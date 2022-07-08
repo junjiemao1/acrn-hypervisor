@@ -79,5 +79,6 @@ def create_mask_list_node(board_etree, scenario_etree, allocation_etree, rdt_pol
 
 def fn(board_etree, scenario_etree, allocation_etree):
     policy_list = rdt.get_policy_list(scenario_etree)
-    create_mask_list_node(board_etree, scenario_etree, allocation_etree, policy_list)
-    alloc_clos_index(board_etree, scenario_etree, allocation_etree, policy_list)
+    if policy_list:
+        create_mask_list_node(board_etree, scenario_etree, allocation_etree, policy_list)
+        alloc_clos_index(board_etree, scenario_etree, allocation_etree, policy_list)
