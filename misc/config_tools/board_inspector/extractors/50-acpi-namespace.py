@@ -8,7 +8,8 @@ import logging
 import lxml.etree
 from collections import defaultdict
 
-from acpiparser import parse_dsdt, parse_resource_data, parse_pci_routing
+from acpiparser import parse_dsdt, parse_resource_data, parse_pci_routing, parse_dsd
+from acpiparser.uuids import *
 from acpiparser.aml.tree import Visitor, Direction
 import acpiparser.aml.builder as builder
 import acpiparser.aml.context as context
@@ -560,6 +561,17 @@ def fetch_device_info(devices_node, interpreter, namepath, args):
                         add_child(mapping_element, "mapping", pin=pin_names[pin], source=str(info))
                     else:
                         add_child(mapping_element, "mapping", pin=pin_names[pin], source=info[0], index=str(info[1]))
+
+        # Device Specific Data
+        if interpreter.context.has_symbol(f"{namepath}._DSD"):
+            pkg = interpreter.interpret_method_call(f"{namepath}._DSD")
+            dsd = parse_dsd(pkg)
+            try:
+                data = dsd[UUID_EXTERNAL_FACING_PORT]
+                add_child(element, "external_facing_port", str(data.is_external_facing))
+                add_child(element, "external_facing_port_uid", str(data.uid))
+            except KeyError:
+                pass
 
     except FutureWork:
         pass

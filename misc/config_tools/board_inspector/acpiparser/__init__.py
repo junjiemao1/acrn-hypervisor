@@ -13,6 +13,7 @@ from acpiparser.facp import FACP
 from acpiparser.rtct import RTCT
 from acpiparser.rdt import parse_resource_data
 from acpiparser.prt import parse_pci_routing
+from acpiparser.dsd import parse_dsd
 from acpiparser.tpm2 import TPM2
 
 def parse_table(signature, path=None):
