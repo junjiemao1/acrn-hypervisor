@@ -268,7 +268,7 @@ int32_t hcall_destroy_vm(__unused struct acrn_vcpu *vcpu, struct acrn_vm *target
 {
 	int32_t ret = -1;
 
-	if (is_paused_vm(target_vm)) {
+	if (is_created_vm(target_vm) || is_paused_vm(target_vm)) {
 		/* TODO: check target_vm guest_flags */
 		ret = shutdown_vm(target_vm);
 	}
