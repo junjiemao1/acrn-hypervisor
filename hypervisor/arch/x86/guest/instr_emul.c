@@ -149,6 +149,10 @@ static const struct instr_emul_vie_op one_byte_opcodes[256] = {
 		.op_type = VIE_OP_TYPE_MOV,
 		.op_flags = VIE_OP_F_MOFFSET | VIE_OP_F_NO_MODRM,
 	},
+	[0xA2] = {
+		.op_type = VIE_OP_TYPE_MOV,
+		.op_flags = VIE_OP_F_MOFFSET | VIE_OP_F_NO_MODRM | VIE_OP_F_BYTE_OP,
+	},
 	[0xA3] = {
 		.op_type = VIE_OP_TYPE_MOV,
 		.op_flags = VIE_OP_F_MOFFSET | VIE_OP_F_NO_MODRM,
@@ -832,6 +836,15 @@ static int32_t emulate_mov(struct acrn_vcpu *vcpu, const struct instr_emul_vie *
 		vie_mmio_read(vcpu, &val);
 		reg = CPU_REG_RAX;
 		vie_update_register(vcpu, reg, val, size);
+		break;
+	case 0xA2U:
+		/*
+		 * MOV from AL to seg:moffset
+		 * A2:		mov moffs8, AL
+		 */
+		val = vm_get_register(vcpu, CPU_REG_RAX);
+		val &= size2mask[size];
+		vie_mmio_write(vcpu, val);
 		break;
 	case 0xA3U:
 		/*
